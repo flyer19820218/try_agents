@@ -1,439 +1,339 @@
-import yfinance as yf
-import os
-import re
-import json
-import calendar
-import requests
-from datetime import datetime, timedelta, timezone, time
-import feedparser
-import google.generativeai as genai
-import pandas as pd
-from curl_cffi import requests as stealth_requests
+"""Weekly, evidence-calibrated macro report for long-term Taiwan investors.
+
+The job intentionally uses one Gemini Flash call for a complete macro report. It
+does not collect or interpret intraday headlines, hot stocks, or short-term
+institutional flows. Raw observations are saved even when the model is not
+available, so a quota error never destroys the underlying dashboard data.
+"""
+
+from __future__ import annotations
+
+import csv
 import io
+import json
+import os
+import time as clock
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
 
-# ==========================================
-# 1. 基礎設定與環境變數 (Settings)
-# ==========================================
-RSS_LIST = [
-    "https://news.google.com/rss/search?q=finance+OR+stock+OR+geopolitics&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
-    "https://news.google.com/rss/search?q=股市+OR+地緣政治+OR+軍事+OR+傳聞&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
-]
+import requests
+import yfinance as yf
+from google import genai
+from google.genai import types
 
-CACHE_FILE = "data/news_cache.json"
-OUT_FILE = "data/latest_report.json"
-HISTORY_DIR = "data/history"
-HOT_STOCKS_FILE = "hot_stocks.json"
 
 TW_TZ = timezone(timedelta(hours=8))
+ROOT = Path(__file__).resolve().parent
+DATA_DIR = ROOT / "data"
+OUT_FILE = DATA_DIR / "latest_report.json"
+HISTORY_DIR = DATA_DIR / "history"
+TELEGRAM_SAFE_LENGTH = 3800
 
-# ==========================================
-# 2. 曉臻財經小教室 - 特務專屬單字庫
-# ==========================================
 FINANCE_TERMS = [
-    # --- 總經與央行政策 ---
-    "VIX 恐慌指數", "CPI (消費者物價指數)", "PCE (個人消費支出物價指數)", "PPI (生產者物價指數)", "非農就業數據 (NFP)", 
-    "聯準會 (Fed)", "FOMC (聯邦公開市場委員會)", "點陣圖 (Dot Plot)", "基準利率", "降息與升息", 
-    "量化寬鬆 (QE)", "量化緊縮 (QT)", "殖利率倒掛", "殖利率曲線 (Yield Curve)", "無風險利率", 
-    "GDP (國內生產毛額)", "PMI (採購經理人指數)", "ISM 製造業指數", "初領失業金人數", "褐皮書 (Beige Book)",
-    "停滯性通膨 (Stagflation)", "通膨預期", "核心通膨", "軟著陸 (Soft Landing)", "硬著陸 (Hard Landing)",
-    "不著陸 (No Landing)", "黑色星期五 (Black Friday)", "黑色星期一", "熔斷機制", "流動性陷阱",
-    "布蘭特原油", "西德州原油 (WTI)", "OPEC+ (石油輸出國組織)", "避險貨幣", "美元指數 (DXY)",
-    "外匯存底", "熱錢 (Hot Money)", "匯率操縱國", "雙赤字 (Twin Deficits)", "購買力平價 (PPP)",
-
-    # --- 基本面與財報分析 ---
-    "EPS (每股盈餘)", "本益比 (PE)", "股價淨值比 (PB)", "ROE (股東權益報酬率)", "ROA (資產報酬率)", 
-    "毛利率 (Gross Margin)", "營業利益率 (Operating Margin)", "淨利率 (Net Margin)", "EBITDA", "自由現金流 (FCF)", 
-    "資本支出 (CapEx)", "營收成長率 (YoY/MoM)", "庫存週轉天數", "應收帳款週轉率", "負債比率", 
-    "流動比率", "速動比率", "利息保障倍數", "商譽 (Goodwill)", "無形資產", 
-    "法說會 (Earnings Call)", "財測 (Guidance)", "三率三升", "除權息", "填息與貼息", 
-    "現金殖利率", "股票股利", "現金股利", "減資 (Capital Reduction)", "庫藏股 (Stock Buyback)", 
-    "IPO (首次公開募股)", "SPO (現金增資)", "私募 (Private Placement)", "併購 (M&A)", "敵意併購", 
-    "下市 (Delisting)", "ADR (美國存託憑證)", "GDR (全球存託憑證)", "KY股", "全額交割股",
-
-    # --- 台股籌碼與交易機制 ---
-    "融資維持率", "融資餘額", "融券餘額", "軋空行情 (Short Squeeze)", "借券賣出餘額", 
-    "三大法人", "外資買賣超", "投信作帳", "自營商避險", "八大行庫 (國家隊)", 
-    "國安基金", "官股券商", "散戶指標 (小台散戶多空比)", "大額交易人未平倉", "主力進出", 
-    "隔日沖", "當沖 (Day Trading)", "現股當沖", "信用交易", "斷頭 (Margin Call)", 
-    "限空令", "平盤下不得融券賣出", "處置股票 (關緊閉)", "注意股票", "警示股", 
-    "零股交易", "盤後定價交易", "鉅額交易", "集合競價", "逐筆交易",
-
-    # --- 技術分析與型態 ---
-    "K線 (陰陽燭)", "跳空缺口", "島狀反轉", "黃金交叉", "死亡交叉", 
-    "移動平均線 (MA)", "季線 (生命線)", "年線 (牛熊分界線)", "乖離率 (BIAS)", "均線糾結", 
-    "RSI (相對強弱指標)", "MACD (平滑異同移動平均線)", "KD指標 (隨機指標)", "布林通道 (Bollinger Bands)", "OBV (能量潮指標)", 
-    "DMI (動向指標)", "SAR (拋物線指標)", "CCI (順勢指標)", "威廉指標 (W%R)", "ATR (真實波動幅度)", 
-    "支撐線與壓力線", "頸線 (Neckline)", "頭肩頂", "頭肩底", "W底 (雙重底)", 
-    "M頭 (雙重頂)", "箱型整理", "三角收斂", "旗型型態", "杯柄型態 (Cup and Handle)", 
-    "波浪理論", "費波那契回撤 (黃金分割)", "量價背離", "爆量長黑", "量縮價跌", 
-    "跳水", "誘多與誘空", "洗盤", "拉尾盤", "殺尾盤",
-
-    # --- 科技與半導體產業 ---
-    "晶圓代工 (Foundry)", "IC 設計 (Fabless)", "IDM (整合元件製造廠)", "封測 (OSAT)", "摩爾定律", 
-    "先進製程", "成熟製程", "EUV (極紫外光微影)", "DUV (深紫外光)", "良率 (Yield)", 
-    "CoWoS 先進封裝", "SoIC", "InFO", "2.5D/3D 封裝", "異質整合", 
-    "FinFET (鰭式場效電晶體)", "GAA (環繞閘極電晶體)", "矽光子 (Silicon Photonics)", "CPO (共封裝光學)", "ABF 載板", 
-    "HBM (高頻寬記憶體)", "DRAM", "NAND Flash", "NOR Flash", "固態硬碟 (SSD)", 
-    "ASIC (客製化晶片)", "FPGA (現場可程式化邏輯閘陣列)", "MCU (微控制器)", "CIS (影像感測器)", "PMIC (電源管理IC)", 
-    "EDA (電子設計自動化)", "IP (矽智財)", "ARM 架構", "x86 架構", "RISC-V", 
-    "GPU (圖形處理器)", "NPU (神經處理單元)", "TPU (張量處理單元)", "邊緣運算 (Edge Computing)", "伺服器 BMC (遠端控制晶片)", 
-    "CSP (雲端服務供應商)", "液冷散熱 (Liquid Cooling)", "均熱板 (VC)", "BBU (伺服器備援電池)", "GB200 (輝達AI伺服器)",
-    "低軌衛星", "O-RAN (開放網路架構)", "Wi-Fi 7", "第三代半導體 (SiC/GaN)", "車用電子",
-
-    # --- 衍生性商品、期貨與選擇權 ---
-    "四巫日 (Quadruple Witching)", "結算日", "期貨正價差", "期貨逆價差", "未平倉量 (Open Interest)", 
-    "選擇權 (Options)", "買權 (Call)", "賣權 (Put)", "履約價 (Strike Price)", "權利金 (Premium)", 
-    "隱含波動率 (IV)", "歷史波動率 (HV)", "Delta (對沖值)", "Gamma", "Theta (時間價值)", 
-    "Vega", "價內 (ITM)", "價平 (ATM)", "價外 (OTM)", "買權賣權比 (Put/Call Ratio)", 
-    "保證金 (Margin)", "追繳保證金", "強制平倉", "VIX 期貨", "選擇權賣方 (莊家)",
-
-    # --- 基金、ETF 與資產配置 ---
-    "ETF (指數股票型基金)", "主動型基金", "被動投資", "成分股調整", "折溢價", 
-    "高股息 ETF", "市值型 ETF", "債券 ETF", "槓桿型 ETF", "反向型 ETF (反一)", 
-    "淨值 (NAV)", "追蹤誤差", "內扣費用 (總開銷費用)", "收益平準金", "配息率", 
-    "避險基金 (Hedge Fund)", "主權基金", "私募基金 (PE Fund)", "創投 (VC)", "家族辦公室", 
-    "資產配置", "股債平衡", "60/40 法則", "定時定額", "單筆投資"
+    "景氣循環", "通膨", "實質利率", "殖利率曲線", "金融條件", "失業率",
+    "工業生產", "貨幣政策", "軟著陸", "停滯性通膨", "資產配置", "再平衡",
 ]
 
-# ==========================================
-# 3. 新聞快取與爬蟲機制 (News Fetching)
-# ==========================================
-def clean_html(text: str) -> str:
-    return re.sub(r"<.*?>", "", text or "")
+# Public FRED CSV endpoints need no API key. They provide economic releases,
+# rather than commentary about releases, which is exactly what this report uses.
+FRED_SERIES = [
+    ("CPIAUCSL", "美國 CPI 年增率", "%", "yoy"),
+    ("CPILFESL", "美國核心 CPI 年增率", "%", "yoy"),
+    ("UNRATE", "美國失業率", "%", "level_3m_change"),
+    ("INDPRO", "美國工業生產年增率", "%", "yoy"),
+    ("FEDFUNDS", "聯邦基金利率", "%", "level_3m_change"),
+    ("T10Y2Y", "美債 10Y−2Y 利差", "百分點", "level_3m_change"),
+]
 
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data if isinstance(data, list) else []
-        except: return []
-    return []
+# These are broad-market context series. The report only receives 3/6/12
+# month changes: it is never fed an intraday quote or individual stock price.
+MARKET_SERIES = [
+    ("^TWII", "台灣加權指數", "市場"),
+    ("^GSPC", "S&P 500", "市場"),
+    ("TWD=X", "美元／台幣", "匯率"),
+    ("DX-Y.NYB", "美元指數 DXY", "金融條件"),
+    ("^TNX", "美國 10 年期公債殖利率", "利率"),
+]
 
-def save_cache(cache_list):
-    os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache_list[-200:], f, ensure_ascii=False, indent=2)
 
-def fetch_news(hours=24, limit=64):
-    raw_cache = load_cache()
-    
-    # 🛡️ 免疫系統：自動清洗快取！如果是字典就只抽出 link 字串，如果是字串就保留
-    cache_list = []
-    for item in raw_cache:
-        if isinstance(item, dict) and "link" in item:
-            cache_list.append(item["link"])
-        elif isinstance(item, str):
-            cache_list.append(item)
-            
-    cache_set = set(cache_list)
-    news = []
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-    
-    for rss in RSS_LIST:
-        feed = feedparser.parse(rss)
-        for e in feed.entries:
-            if not hasattr(e, "published_parsed"): continue
-            unix = calendar.timegm(e.published_parsed)
-            dt = datetime.fromtimestamp(unix, tz=timezone.utc)
-            if dt < cutoff: continue 
-            link = getattr(e, "link", None)
-            if not link or link in cache_set: continue 
-                
-            news.append({
-                "title": getattr(e, "title", "(no title)"),
-                "link": link,
-                "summary": clean_html(e.get("summary", ""))[:300],
-                "dt_utc": dt.isoformat(),
-            })
-            cache_set.add(link)
-            cache_list.append(link)
-            
-    save_cache(cache_list)
-    news.sort(key=lambda x: x["dt_utc"], reverse=True)
-    return news[:limit]
+def save_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
 
-# ==========================================
-# 4. 輔助資料抓取 (人氣股與真實市場指標)
-# ==========================================
-def update_hot_stocks():
-    try:
-        # 1. 改為抓取「所有上市個股」的日成交資訊
-        url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
-        res = requests.get(url, timeout=10)
-        data = res.json()
-        
-        # 2. 準備一個陣列來裝處理後的資料
-        processed_data = []
-        for item in data:
-            try:
-                # 取得成交金額 (TradeValue)，移除可能的逗號並轉為整數
-                val_str = str(item.get("TradeValue", "0")).replace(",", "")
-                val_int = int(val_str)
-                processed_data.append({
-                    "Code": item["Code"],
-                    "Name": item["Name"],
-                    "TradeValue": val_int
-                })
-            except:
-                pass
-                
-        # 3. 依照「成交金額」由大到小 (降冪) 排序
-        sorted_data = sorted(processed_data, key=lambda x: x["TradeValue"], reverse=True)
-        
-        # 4. 取出成交值最高的前 6 名
-        top_6 = {f"{item['Code']}.TW": item['Name'] for item in sorted_data[:6]}
-        
-        # ⚠️ 注意：這裡的存檔 Key 故意保持 "top_volume_pool"，是為了與前端無縫接軌
-        with open(HOT_STOCKS_FILE, "w", encoding="utf-8") as f:
-            json.dump({"top_volume_pool": top_6}, f, ensure_ascii=False, indent=4)
-            
-    except Exception as e:
-        print(f"⚠️ 抓取成交值排行榜失敗: {e}")
 
-# ==========================================
-def fetch_risk_indicators():
-    """方案 2 修正版：政府 API 精準對位系統 (擴展天數與分離錯誤處理)"""
-    risk_data = {
-        "vix": "-", "vix_trend": "",
-        "usd_twd": "-", "usd_trend": "",
+def latest_on_or_before(rows: list[tuple[date, float]], target: date) -> tuple[date, float] | None:
+    matches = [row for row in rows if row[0] <= target]
+    return matches[-1] if matches else None
+
+
+def annual_change(rows: list[tuple[date, float]]) -> float | None:
+    if len(rows) < 13:
+        return None
+    latest_date, latest_value = rows[-1]
+    # Monthly series need a reference roughly one calendar year earlier. 330 days
+    # can accidentally select the prior August for a July release (only 11 months).
+    base = latest_on_or_before(rows, latest_date - timedelta(days=360))
+    if not base or base[1] == 0:
+        return None
+    return round((latest_value / base[1] - 1) * 100, 2)
+
+
+def fetch_fred_series(series_id: str, label: str, unit: str, calculation: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "id": series_id,
+        "label": label,
+        "unit": unit,
+        "source": "FRED",
+        "source_url": f"https://fred.stlouisfed.org/series/{series_id}",
+        "status": "unavailable",
     }
-    
-    # 1. VIX 獨立處理
     try:
-        vix_df = yf.Ticker("^VIX").history(period="5d")
-        if len(vix_df) >= 2:
-            v = vix_df['Close'].iloc[-1]
-            p = vix_df['Close'].iloc[-2]
-            risk_data["vix"] = f"{v:.2f}"
-            risk_data["vix_trend"] = f"▲ {v-p:.2f}" if v > p else f"▼ {p-v:.2f}"
-        elif len(vix_df) == 1:
-            risk_data["vix"] = f"{vix_df['Close'].iloc[-1]:.2f}"
-            risk_data["vix_trend"] = "休市"
-    except Exception as e:
-        print(f"⚠️ VIX 抓取錯誤: {e}")
-        
-    # 2. 匯率獨立處理
-    try:
-        twd_df = yf.Ticker("TWD=X").history(period="5d")
-        if len(twd_df) >= 2:
-            v = twd_df['Close'].iloc[-1]
-            p = twd_df['Close'].iloc[-2]
-            risk_data["usd_twd"] = f"{v:.2f}"
-            risk_data["usd_trend"] = f"▲ {v-p:.2f}" if v > p else f"▼ {p-v:.2f}"
-        elif len(twd_df) == 1:
-            risk_data["usd_twd"] = f"{twd_df['Close'].iloc[-1]:.2f}"
-            risk_data["usd_trend"] = "休市"
-    except Exception as e:
-        print(f"⚠️ 匯率抓取錯誤: {e}")
-        
-    return risk_data
+        response = requests.get(
+            f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", timeout=20
+        )
+        response.raise_for_status()
+        rows: list[tuple[date, float]] = []
+        for row in csv.DictReader(io.StringIO(response.text)):
+            raw_value = row.get(series_id, "")
+            try:
+                rows.append((date.fromisoformat(row["observation_date"]), float(raw_value)))
+            except (KeyError, TypeError, ValueError):
+                continue
+        if not rows:
+            return result
 
-# ==========================================
-def get_market_indicators_text(risk_data):
-    """【教官流停損版】絕對不給 AI 看壞掉的估值，從水源截斷"""
-    indicators = []
-    
-    # 1. VIX (有數據才給)
-    if risk_data.get("vix") and risk_data["vix"] != "-":
-        indicators.append(f"★ VIX 恐慌指數：{risk_data['vix']} ({risk_data['vix_trend']})")
-        
-    # 2. 匯率 (有數據才給)
-    if risk_data.get("usd_twd") and risk_data["usd_twd"] != "-":
-        indicators.append(f"★ 美元/台幣匯率：{risk_data['usd_twd']} ({risk_data['usd_trend']})")
-    
-    # 🚀 注意：這裡徹底刪除 PE/PB 邏輯，AI 沒看到這項，就不會產出「估值」這行字
-    
-    return "【盤前真實市場指標】\n" + "\n".join(indicators)
-    
-# ==========================================
-# 5. Telegram 推播功能 (Notification)
-# ==========================================
-def send_telegram_message(text):
+        latest_date, latest_value = rows[-1]
+        result.update({"status": "available", "as_of": latest_date.isoformat(), "latest": round(latest_value, 2)})
+        if calculation == "yoy":
+            result["display_value"] = annual_change(rows)
+            result["display_label"] = "年增率"
+        else:
+            prior = latest_on_or_before(rows, latest_date - timedelta(days=75))
+            result["display_value"] = round(latest_value, 2)
+            result["display_label"] = "最新值"
+            if prior:
+                result["change_3m"] = round(latest_value - prior[1], 2)
+    except requests.RequestException as error:
+        result["error"] = str(error)[:160]
+    return result
+
+
+def nearest_close(closes: Any, target: Any) -> float | None:
+    """Use the provider's original timezone-aware index for historical lookup."""
+    eligible = closes.loc[closes.index <= target]
+    if eligible.empty:
+        return None
+    value = eligible.iloc[-1]
+    return float(value) if value else None
+
+
+def fetch_market_trend(symbol: str, label: str, category: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "symbol": symbol,
+        "label": label,
+        "category": category,
+        "source": "Yahoo Finance",
+        "status": "unavailable",
+    }
+    try:
+        # Yahoo Finance accepts stable named ranges such as 1y/2y; "14mo" can
+        # silently degrade to a tiny response on some yfinance versions.
+        history = yf.Ticker(symbol).history(period="2y", auto_adjust=False)
+        closes = history["Close"].dropna()
+        if closes.empty:
+            return result
+        latest_time = closes.index[-1]
+        latest = float(closes.iloc[-1])
+        result.update({"status": "available", "as_of": latest_time.strftime("%Y-%m-%d"), "latest": round(latest, 2)})
+        for name, days in (("3m", 92), ("6m", 184), ("12m", 366)):
+            prior = nearest_close(closes, latest_time - timedelta(days=days))
+            if prior and prior != 0:
+                if category == "利率":
+                    result[f"change_{name}_bps"] = round((latest - prior) * 100)
+                else:
+                    result[f"change_{name}_pct"] = round((latest / prior - 1) * 100, 2)
+    except Exception as error:  # yfinance has several provider-specific exception types.
+        result["error"] = str(error)[:160]
+    return result
+
+
+def fetch_macro_snapshot() -> dict[str, list[dict[str, Any]]]:
+    return {
+        "economic_indicators": [fetch_fred_series(*series) for series in FRED_SERIES],
+        "market_trends": [fetch_market_trend(*series) for series in MARKET_SERIES],
+    }
+
+
+def indicator_text(indicators: list[dict[str, Any]]) -> str:
+    lines = []
+    for item in indicators:
+        if item["status"] != "available":
+            lines.append(f"- {item['label']}：資料不可用")
+            continue
+        value = item.get("display_value")
+        if value is None:
+            lines.append(f"- {item['label']}：資料不足以計算；最近原始值 {item['latest']}，資料日 {item['as_of']}")
+            continue
+        extra = ""
+        if item.get("change_3m") is not None:
+            extra = f"；約三個月變動 {item['change_3m']:+.2f} {item['unit']}"
+        lines.append(f"- {item['label']}：{value:.2f}{item['unit']}（{item['display_label']}；資料日 {item['as_of']}）{extra}")
+    return "\n".join(lines)
+
+
+def market_trend_text(trends: list[dict[str, Any]]) -> str:
+    lines = []
+    for item in trends:
+        if item["status"] != "available":
+            lines.append(f"- {item['label']}：資料不可用")
+            continue
+        changes = []
+        for period in ("3m", "6m", "12m"):
+            if item["category"] == "利率":
+                value = item.get(f"change_{period}_bps")
+                if value is not None:
+                    changes.append(f"{period} {value:+.0f}bp")
+            else:
+                value = item.get(f"change_{period}_pct")
+                if value is not None:
+                    changes.append(f"{period} {value:+.2f}%")
+        lines.append(f"- {item['label']}：最近值 {item['latest']:.2f}，{'；'.join(changes) or '歷史資料不足'}，資料日 {item['as_of']}")
+    return "\n".join(lines)
+
+
+def build_prompt(snapshot: dict[str, list[dict[str, Any]]], today_term: str) -> str:
+    now_tw = datetime.now(TW_TZ)
+    return f"""
+你是以長期資產配置為核心的總體經濟研究編輯。今天是 {now_tw:%Y-%m-%d}（台灣時間）。
+請只根據下方提供的經濟時間序列與長週期市場趨勢，撰寫「台灣長線投資人總經觀察」。
+
+本報告的目的：理解景氣、通膨、貨幣政策、金融條件如何改變未來一季到一年的投資環境；不是解釋單日漲跌，更不是預測個股。
+
+嚴格規則：
+1. 不得使用或評論即時新聞、地緣政治標題、個別股票、法人單日買賣超、技術指標、成交量或 VIX。
+2. 不得補造資料、經濟數字、政策日期、企業資訊或來源。資料日期比今天早是正常現象，必須保留此限制。
+3. 觀察到同向或反向變動，只能寫「一致／不一致」，不能宣稱因果。沒有證據時請明說「目前資料不足」。
+4. 美股、匯率與殖利率是市場價格；CPI、失業率、工業生產、聯邦基金利率是發布頻率不同的經濟資料。不可把它們混成同一時間點的即時讀數。
+5. 對台灣的影響只能討論傳導機制：出口循環、全球需求、美元與資金成本；不得延伸為特定台灣公司或產業的買賣建議。
+6. 用平實語氣，不使用「必然、確立、噴發、血洗、抄底、追高」等詞。不能給買進、賣出、目標價或持倉比例。
+7. 總長不超過 3,400 個中文字元，使用繁體中文，避免表格。
+
+請固定使用下列格式：
+
+🧭 【長線總經結論】
+120–180 字。先說目前景氣／通膨／利率環境較接近什麼狀態；再說最重要的不確定性。結論必須是「暫時判讀」，不是預言。
+
+🌡️ 【四個總經儀表】
+以「成長、通膨、貨幣政策、金融條件」四點分別判讀。每點要引用至少一個提供的資料與日期；若資料不足要明說。
+
+📈 【趨勢，而非日線】
+只討論 3、6、12 個月的變動。說明市場價格與經濟資料是否一致或不一致；禁止評論 1 個月變動。
+
+🇹🇼 【對台灣長線配置的傳導】
+用 3 點討論全球需求、匯率與資金成本可能怎麼影響台灣的長期環境；每一點必須包含「仍待驗證」條件。
+
+⚖️ 【目前不能下結論的地方】
+列 2–3 點資料限制、發布落後或相關不等於因果的提醒。
+
+🔎 【未來一季追蹤清單】
+列 4 個可驗證的總經條件，例如核心通膨趨勢、失業率、工業生產、殖利率曲線、美元／台幣的 3 個月方向。不要寫交易指令。
+
+🏫 【曉臻財經小教室】
+今日單字：【{today_term}】
+兩句白話說明定義與最常見的錯誤解讀。
+
+結尾：一句不超過 16 字的長線提醒，不需押韻。
+
+【經濟指標：資料來源 FRED】
+{indicator_text(snapshot['economic_indicators'])}
+
+【市場長週期趨勢：資料來源 Yahoo Finance】
+{market_trend_text(snapshot['market_trends'])}
+""".strip()
+
+
+def fallback_report(snapshot: dict[str, list[dict[str, Any]]], reason: str) -> str:
+    return (
+        "🧭 【長線總經資料快照】\n"
+        "本次未取得 AI 文字整理；以下保留原始長週期資料。資料變動不代表因果，也不構成投資建議。\n\n"
+        "🌡️ 【經濟指標】\n"
+        f"{indicator_text(snapshot['economic_indicators'])}\n\n"
+        "📈 【市場長週期趨勢】\n"
+        f"{market_trend_text(snapshot['market_trends'])}\n\n"
+        f"系統狀態：Gemini 報告未生成（{reason[:180]}）。"
+    )
+
+
+def generate_report(prompt: str, snapshot: dict[str, list[dict[str, Any]]]) -> str:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return fallback_report(snapshot, "未設定 GEMINI_API_KEY")
+
+    client = genai.Client(api_key=api_key)
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    config = types.GenerateContentConfig(
+        temperature=0.15,
+        max_output_tokens=2400,
+        response_mime_type="text/plain",
+    )
+    for attempt in range(2):
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt, config=config)
+            text = (response.text or "").strip()
+            return text if text else fallback_report(snapshot, "模型回傳空白內容")
+        except Exception as error:
+            message = str(error)
+            quota_error = any(token in message.lower() for token in ("429", "quota", "resource exhausted"))
+            if attempt == 0 and not quota_error:
+                clock.sleep(4)
+                continue
+            return fallback_report(snapshot, message)
+    return fallback_report(snapshot, "未知模型錯誤")
+
+
+def send_telegram_message(text: str) -> None:
     token = os.environ.get("TELEGRAM_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-    
     if not token or not chat_id:
-        print("⚠️ 未設定 Telegram Token 或 Chat ID，跳過推播。")
+        print("INFO: Telegram credentials are not configured; skipped notification.")
         return
-        
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = { "chat_id": chat_id, "text": text, "parse_mode": "Markdown" }
-    
+    safe_text = text if len(text) <= TELEGRAM_SAFE_LENGTH else text[:TELEGRAM_SAFE_LENGTH].rsplit("\n", 1)[0] + "\n\n（完整報告請見網站。）"
     try:
-        res = requests.post(url, json=payload, timeout=10)
-        if res.status_code == 200:
-            print("✅ Telegram 推播成功！")
-        elif res.status_code == 400 and "can't parse entities" in res.text:
-            print("⚠️ Telegram 格式解析失敗，改用純文字重發...")
-            safe_payload = { "chat_id": chat_id, "text": text }
-            safe_res = requests.post(url, json=safe_payload, timeout=10)
-            if safe_res.status_code == 200: print("✅ Telegram 安全模式推播成功！")
-            else: print(f"❌ 安全模式也推播失敗: {safe_res.text}")
-        else:
-            print(f"⚠️ Telegram 推播失敗: {res.text}")
-    except Exception as e:
-        print(f"⚠️ Telegram 請求發生錯誤: {e}")
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": safe_text},
+            timeout=15,
+        )
+        response.raise_for_status()
+        print("INFO: Telegram notification sent.")
+    except requests.RequestException as error:
+        print(f"WARN: Telegram notification failed: {error}")
 
-# ==========================================
-# 6. 核心 AI 大腦 (Gemini 2.5 Flash) - 全領域交叉驗證版
-# ==========================================
-def ai_analyze(news, period_str, risk_data, today_term):
-    if not news: 
-        return f"📰 目前偵蒐範圍內無重大市場波動事件。({period_str})"
-        
-    text = "\n".join([f"{n['title']} | {n['summary']}" for n in news])
-    market_data_section = get_market_indicators_text(risk_data)
-    
-    today_date = datetime.now(TW_TZ).strftime('%Y-%m-%d')
-    
-    # 🌟 曉臻老師專屬：全項目交叉比對協議 (Cross-Verification Protocol)
-    strategy_prompt = f"""
-    任務：你現在是財經分析師「曉臻」，負責導讀財經週報。你具備極度冷靜的科學家精神，嚴格遵守「有幾分證據說幾分話」。
 
-    【🛡️ 全領域真理交叉比對協議】：
-    針對每一條重大新聞，你必須啟動以下對位思考，若數據不匹配，必須在解讀中直接打臉：
-    1. **地緣政治 vs. 避險資產**：新聞說「中東/戰爭升溫」，若美元指數、黃金、原油、VIX 沒噴，請定調為「情緒噪音」。
-    2. **科技大單 vs. 產業常識**：新聞說「三星/英特爾拿下 HBM4 或 2nm 大單」，必須對比台積電(TSMC)的領先地位與良率歷史。若無實質產出證據，請標註為「公關策略/保守看待」。
-    3. **政策利多 vs. 市場匯率**：新聞說「某國經濟大好/大降息」，若該國貨幣匯率卻在走貶，請點出「資金實際流向與新聞不符」。
-    4. **個股傳聞 vs. 籌碼情緒**：新聞說「某股缺爆/利多」，若 VIX 飆高或台幣重貶，請提醒「系統性風險高於個股利多」。
-    5. **排除煽動詞彙**：自動過濾「血洗、噴發、驚人、慘了」等農場字眼，還原為物理事實。
-
-    【提供素材】：
-    👉 今日日期：{today_date}
-    {market_data_section}
-    {text}
-    
-    【撰寫規範】：
-    ⚠️【最高指令一】：條列項目首字禁止加星號。保留【重大事件】中的 ★ 指標。
-    ⚠️【最高指令二】：嚴禁問候語。第一行直接開始「🎯 【一分鐘戰略速讀】」。
-    ⚠️【最高指令三】：如果今日日期是每個月的 1 號（不管有無交易），請務必在報告中針對台灣宏觀景氣循環進行「長線投資觀察」的戰略補充。
-
-    🎯 【一分鐘戰略速讀】
-    約 200 字精華。請用科學實驗般的口吻，解析今日「真理篩選」後剩下的市場乾貨。
-
-    📊 【重大事件：交叉驗證報告】
-    請挑選 4-6 件新聞，每件必須包含：
-    - [事件標題] (重要度：1~5顆星，請以 ★ 標示，例如 ★★★★★)
-    - **事實核對**：[對照 VIX、匯率或產業邏輯後的真實性評估]
-    - **解讀**：[這對投資人的真實影響是什麼？]
-
-    🔥 【市場情緒與壓力測試】
-    強制引述 VIX、匯率數據，作為今日新聞信賴度的「科學儀表板」。
-
-    💰 【台股影響與板塊點名】
-    點名受惠與受衝擊產業。針對半導體、AI 鏈，必須提及台積電與海力士的強強聯手現狀。
-
-    📈 【投資觀察指引】
-    給出 3-5 點具體、如馬拉松配速般穩健的觀察建議。
-
-    🏫 【曉臻財經小教室】
-    今日單字：【{today_term}】
-    用 2-3 句白話文解釋，並說明它如何幫助我們「看穿市場假象」。
-
-    結尾：與今日戰報相關的有押韻「八字臻言」。
-    """
-
-    genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    
-    try:
-        response = model.generate_content(strategy_prompt)
-        return response.text
-    except Exception as e: 
-        return f"AI 情報官連線失敗: {e}"
-# ==========================================
-# 7. 主程式執行流程 (Main Pipeline)
-# ==========================================
-def run_daily():
-    task_type = os.environ.get("TASK_TYPE", "full_report")
-    print(f"🎯 接收到指令，啟動任務模式：【{task_type}】")
-
-    update_hot_stocks() 
-    new_fetched_news = fetch_news() 
-    
+def run_macro_report() -> None:
     now_tw = datetime.now(TW_TZ)
-    weekday = now_tw.weekday()
-    period_str = "盤前" if now_tw.hour < 12 else "盤後"
-    if weekday == 5: period_str = "週末特刊-美股週收盤"
-    if weekday == 6: period_str = "週末特刊-下週展望"
+    snapshot = fetch_macro_snapshot()
+    term_index = (now_tw.date() - date(2024, 1, 1)).days % len(FINANCE_TERMS)
+    report = generate_report(build_prompt(snapshot, FINANCE_TERMS[term_index]), snapshot)
+    send_telegram_message(report)
 
-    old_report = "📊 AI 報告將於指定發報時間自動生成。"
-    old_tts_report = "" # 🟢 處理舊有存檔
-    old_news = []
-    if os.path.exists(OUT_FILE):
-        try:
-            with open(OUT_FILE, "r", encoding="utf-8") as f:
-                old_data = json.load(f)
-                old_report = old_data.get("report", old_report)
-                old_tts_report = old_data.get("tts_report", "")
-                old_news = old_data.get("news", [])
-        except: pass
-
-    combined_news = new_fetched_news + old_news
-    seen_links = set()
-    final_news = []
-    
-    for n in combined_news:
-        if n["link"] not in seen_links:
-            seen_links.add(n["link"])
-            final_news.append(n)
-            
-    final_news.sort(key=lambda x: x["dt_utc"], reverse=True)
-    final_news = final_news[:64]
-
-    # 🌟 取得最新風險指標 (已拔除 PE/PB)
-    current_risk_data = fetch_risk_indicators()
-
-    # ====================================================
-    # 🌟 曉臻小教室：絕對序位系統 (順序播放，絕對不重複)
-    # ====================================================
-    # 以 2024 年 1 月 1 日為基準點
-    base_date = datetime(2024, 1, 1, tzinfo=TW_TZ)
-    # 計算今天距離基準日總共過了幾天
-    total_days_passed = (now_tw - base_date).days
-    
-    # 用總天數對詞庫長度取餘數，保證 800 個詞會「按順序」走完一輪
-    term_index = total_days_passed % len(FINANCE_TERMS)
-    today_term = FINANCE_TERMS[term_index]
-
-    if task_type == "full_report":
-        # 在終端機印出序號，方便教官核對進度
-        print(f"🧠 執行任務：呼叫 AI 撰寫深度報告... (今日單字序號：{term_index}，單字：{today_term})")
-        report_text = ai_analyze(final_news, period_str, current_risk_data, today_term)
-        
-        # 🟢 魔法替換：專門產生一份給曉臻唸的隱藏版「注音小抄劇本」
-        tts_report_text = report_text.replace("重磅", "仲棒") \
-                                     .replace("定調", "定掉") \
-                                     .replace("軋空", "嘎空")
-        
-        send_telegram_message(report_text) # Telegram 還是發正規文字，畫面不受影響
-    else:
-        print("📰 執行任務：僅靜默更新新聞，不呼叫 AI。")
-        report_text = old_report 
-        tts_report_text = old_tts_report if old_tts_report else report_text.replace("重磅", "仲棒").replace("定調", "定掉").replace("軋空", "嘎空")
-    
-    # 🌟 準備存檔封包 (🟢 新增 tts_report 欄位)
+    # Keep legacy keys as harmless empty values so old deployed frontends do not crash.
     payload = {
         "updated_at_utc": now_tw.strftime("%Y-%m-%d %H:%M:%S (TW)"),
-        "title": f"全球局勢與市場情報 {now_tw.strftime('%Y-%m-%d')} {period_str}",
-        "report": report_text,          # 給畫面顯示用的 (有錯字會很糗，所以保持正常)
-        "tts_report": tts_report_text,  # 🟢 給語音系統專用的 (包含仲棒、嘎空)
-        "news": final_news, 
-        "risk_indicators": current_risk_data, 
+        "title": f"台灣長線總經觀察 {now_tw:%Y-%m-%d}",
+        "report_type": "weekly_macro",
+        "gemini_requests_this_run": 1 if os.environ.get("GEMINI_API_KEY") else 0,
+        "report": report,
+        "macro_snapshot": snapshot,
+        "news": [],
+        "risk_indicators": {"vix": "-", "vix_trend": "", "usd_twd": "-", "usd_trend": ""},
     }
-    
-    # 🌟 存入最新報告
-    os.makedirs(os.path.dirname(OUT_FILE), exist_ok=True)
-    with open(OUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-    
-    # 🌟 存入歷史紀錄夾
-    os.makedirs(HISTORY_DIR, exist_ok=True)
-    hist_name = f"{now_tw.strftime('%Y-%m-%d')}_{period_str}.json"
-    with open(os.path.join(HISTORY_DIR, hist_name), "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    save_json(OUT_FILE, payload)
+    save_json(HISTORY_DIR / f"{now_tw:%Y-%m-%d}_長線總經.json", payload)
+    print(f"INFO: saved macro report to {OUT_FILE}")
 
-# --- 程式進入點 ---
+
 if __name__ == "__main__":
-    run_daily()
+    run_macro_report()

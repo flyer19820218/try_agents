@@ -1,19 +1,16 @@
-🚀 Lyu-Science-Cloud Financial AI Daily | 財經 AI 快報
-A fully automated, dual-platform (Web & Mobile) financial analysis system powered by AI and Edge computing.
-一套全自動化、雙端部署（網頁與手機）的 AI 財經分析與語音播報系統。
+🚀 Lyu-Science-Cloud Macro Compass | 長線總經觀察
+
+一套以台灣長線投資人為核心的自動化總經觀察系統。每週使用一次 Gemini Flash，把可追溯的經濟時間序列整理成景氣、通膨、利率、金融條件與台灣傳導的觀察報告。
 
 💡 Core Philosophy / 產品核心理念
 "Investing is a marathon, not a sprint." / 「投資是一場馬拉松，而不是百米衝刺。」
 
-This platform is deliberately designed to foster long-term investment mindsets. While it provides real-time equity indices and institutional data, it explicitly excludes high-volatility, short-term speculative commodities like Gold and Crude Oil. The UI/UX is engineered to deliver macro-trends and reduce daily trading anxiety, guiding users towards financial freedom through steady, long-term perspectives.
-
-本系統的設計初衷為建立健康的長線投資思維。雖然系統提供即時的股市指數與法人籌碼動向，但我們刻意在系統層面阻斷了黃金、原油等高波動、易誘發短線投機的報價資訊。整體的 UI/UX 旨在呈現總體經濟趨勢，降低使用者的看盤焦慮，引導受眾透過穩健的長線視角通往財務自由。
+本系統刻意排除即時新聞、熱門股、短線法人籌碼與盤前／盤後評論。它保留的是有發布頻率與資料日期的經濟指標，並把市場資料限制為 3、6、12 個月的趨勢，降低「看新聞就交易」的誘惑。
 
 ✨ Key Features / 核心功能
-1. 🤖 AI-Powered Market Analysis (多模態 AI 盤勢分析)
-(EN) Integrates LLMs (Gemini) to automatically aggregate and summarize global financial events, pre-market/post-market trends, and weekend special reports.
+1. 🤖 Evidence-calibrated Macro Analysis（總體經濟觀察）
 
-(TW) 深度整合 Gemini AI，全自動統整全球財經事件，依據時段自動產出「盤前速讀」、「盤後精華」與「週末特報」。
+每週以一次 Gemini Flash 呼叫，整理 FRED 經濟資料與長週期市場趨勢。模型不得把相關寫成因果、不得補造資料，也不得給個股買賣建議。
 
 2. 🎙️ Zero-Latency Neural Voice Broadcast (零延遲神經網路語音播報)
 (EN) Utilizes edge-tts (HsiaoChen Neural Voice) with asynchronous I/O (asyncio) for seamless audio generation. Includes a custom pronunciation dictionary for financial jargon.
@@ -25,15 +22,14 @@ This platform is deliberately designed to foster long-term investment mindsets. 
 
 (TW) 電腦版與手機版獨立架構。手機版具備專屬特務級 UI、動態漲跌方塊、富途牛牛風格的 24H 新聞垂直時間軸，並完美修復 iOS 瀏覽器渲染問題。
 
-4. ⚙️ 100% Unattended Automation (全自動化無人值守)
-(EN) Decoupled data generation and frontend rendering. Uses JSON as the data bridge, driven by fully automated Cron-job triggers for uninterrupted daily updates.
+4. ⚙️ 低額度自動化
 
-(TW) 資料產出與前端展示完全解耦。以 JSON 作為資料橋樑，透過 Cron-job 節點打破雲端休眠限制，達成 100% 免人工介入的全自動化運作。
+GitHub Actions 在每週一台灣時間 05:09 執行一次。每次完整報告只呼叫 Gemini Flash 一次；模型額度失敗時仍會保存原始資料快照。
 
 🏗️ System Architecture / 系統架構
-Data Aggregation: yfinance (Global/Taiwan equities) + HiStock (Institutional movements) + 24H News Crawlers.
+Data Aggregation: FRED 公開經濟時間序列 + yfinance 長週期市場資料。
 
-Data Processing: LLM Summarization -> Local JSON storage (latest_report.json).
+Data Processing: 1× Gemini Flash macro synthesis -> Local JSON storage (`latest_report.json`).
 
 Frontend Caching: Advanced Streamlit @st.cache_data implementation to prevent memory leaks (Out of Memory) and handle high-frequency wake-ups.
 

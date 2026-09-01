@@ -1,5 +1,4 @@
 streamlit
-feedparser
 requests
 pandas
 matplotlib
@@ -8,5 +7,4 @@ lxml
 beautifulsoup4
 pytz
 edge-tts
-asyncio
 google-genai

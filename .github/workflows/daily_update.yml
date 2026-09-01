@@ -1,17 +1,11 @@
-name: Daily Finance Update
+name: Weekly Macro Update
 
 on:
   schedule:
-    # 台北時間 05:09 (UTC 21:09) 每日一報
-    # 涵蓋了平日的晨報與週末的特刊
-    - cron: '9 21 * * *'
+    # 每週一台北時間 05:09（週日 UTC 21:09）。
+    # 經濟資料多為週／月頻；週更可避免用日線雜訊製造結論。
+    - cron: '9 21 * * 0'
   workflow_dispatch:
-    inputs:
-      task_type:
-        description: '任務類型'
-        default: 'full_report'
-        type: choice
-        options: [full_report, news_only]
 
 permissions:
   contents: write
@@ -27,12 +21,10 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install pandas requests lxml yfinance curl-cffi feedparser google-generativeai
+          pip install -r requirements.txt
 
       - name: Run agent
         env:
-          # 優先讀取手動觸發選項，定時排程則預設為 full_report
-          TASK_TYPE: ${{ inputs.task_type || 'full_report' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python finance_news_agent.py
 

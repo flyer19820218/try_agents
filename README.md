@@ -31,6 +31,12 @@ Data Aggregation: FRED 公開經濟時間序列 + yfinance 長週期市場資料
 
 Data Processing: 1× Gemini Flash macro synthesis -> Local JSON storage (`latest_report.json`).
 
+## Gemini model
+
+The default is `gemini-3.7-flash`. Copy `.env.example` to `.env` and add a
+Gemini API key for local runs; GitHub Actions continues to use the existing
+`GEMINI_API_KEY` repository secret. Do not commit `.env`.
+
 Frontend Caching: Advanced Streamlit @st.cache_data implementation to prevent memory leaks (Out of Memory) and handle high-frequency wake-ups.
 
 Hosting Pipeline: GitHub repository connected to Streamlit Community Cloud with CI/CD deployment.

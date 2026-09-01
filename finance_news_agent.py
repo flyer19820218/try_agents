@@ -57,6 +57,26 @@ MARKET_SERIES = [
 ]
 
 
+def load_local_env() -> None:
+    """Load only this project's optional local Gemini settings.
+
+    GitHub Actions supplies its secret through the environment, which takes
+    precedence. Keeping this tiny parser avoids adding another dependency just
+    to make a local one-file run convenient.
+    """
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        return
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key in {"GEMINI_API_KEY", "GEMINI_MODEL"} and not os.environ.get(key):
+            os.environ[key] = value.strip().strip('"').strip("'")
+
+
 def save_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
@@ -272,9 +292,11 @@ def generate_report(prompt: str, snapshot: dict[str, list[dict[str, Any]]]) -> s
         return fallback_report(snapshot, "未設定 GEMINI_API_KEY")
 
     client = genai.Client(api_key=api_key)
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    # Gemini 3.7 Flash is the current stable Flash model. Its default medium
+    # thinking level is retained; older sampling controls such as temperature
+    # are deliberately omitted because they are not supported by this model.
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash")
     config = types.GenerateContentConfig(
-        temperature=0.15,
         max_output_tokens=2400,
         response_mime_type="text/plain",
     )
@@ -324,6 +346,7 @@ def run_macro_report() -> None:
         "updated_at_utc": now_tw.strftime("%Y-%m-%d %H:%M:%S (TW)"),
         "title": f"台灣長線總經觀察 {now_tw:%Y-%m-%d}",
         "report_type": "weekly_macro",
+        "model": os.environ.get("GEMINI_MODEL", "gemini-3.7-flash"),
         "gemini_requests_this_run": 1 if os.environ.get("GEMINI_API_KEY") else 0,
         "report": report,
         "macro_snapshot": snapshot,
@@ -336,4 +359,5 @@ def run_macro_report() -> None:
 
 
 if __name__ == "__main__":
+    load_local_env()
     run_macro_report()

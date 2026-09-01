@@ -97,13 +97,14 @@ def latest_on_or_before(rows: list[tuple[date, float]], target: date) -> tuple[d
     return matches[-1] if matches else None
 
 
-def annual_change(rows: list[tuple[date, float]]) -> float | None:
-    if len(rows) < 13:
+def annual_change(rows: list[tuple[date, float]], as_of: date | None = None) -> float | None:
+    relevant_rows = [row for row in rows if as_of is None or row[0] <= as_of]
+    if len(relevant_rows) < 13:
         return None
-    latest_date, latest_value = rows[-1]
+    latest_date, latest_value = relevant_rows[-1]
     # Monthly series need a reference roughly one calendar year earlier. 330 days
     # can accidentally select the prior August for a July release (only 11 months).
-    base = latest_on_or_before(rows, latest_date - timedelta(days=360))
+    base = latest_on_or_before(relevant_rows, latest_date - timedelta(days=360))
     if not base or base[1] == 0:
         return None
     return round((latest_value / base[1] - 1) * 100, 2)
@@ -138,12 +139,17 @@ def fetch_fred_series(series_id: str, label: str, unit: str, calculation: str) -
         if calculation == "yoy":
             result["display_value"] = annual_change(rows)
             result["display_label"] = "年增率"
+            prior_yoy = annual_change(rows, latest_date - timedelta(days=75))
+            if result["display_value"] is not None and prior_yoy is not None:
+                result["change_3m"] = round(result["display_value"] - prior_yoy, 2)
+                result["change_3m_unit"] = "個百分點"
         else:
             prior = latest_on_or_before(rows, latest_date - timedelta(days=75))
             result["display_value"] = round(latest_value, 2)
             result["display_label"] = "最新值"
             if prior:
                 result["change_3m"] = round(latest_value - prior[1], 2)
+                result["change_3m_unit"] = "個百分點" if unit == "%" else unit
     except requests.RequestException as error:
         result["error"] = str(error)[:160]
     return result
@@ -207,7 +213,7 @@ def indicator_text(indicators: list[dict[str, Any]]) -> str:
             continue
         extra = ""
         if item.get("change_3m") is not None:
-            extra = f"；約三個月變動 {item['change_3m']:+.2f} {item['unit']}"
+            extra = f"；約三個月變動 {item['change_3m']:+.2f} {item.get('change_3m_unit', item['unit'])}"
         lines.append(f"- {item['label']}：{value:.2f}{item['unit']}（{item['display_label']}；資料日 {item['as_of']}）{extra}")
     return "\n".join(lines)
 
@@ -244,6 +250,7 @@ def build_prompt(snapshot: dict[str, list[dict[str, Any]]], today_term: str) -> 
 1. 不得使用或評論即時新聞、地緣政治標題、個別股票、法人單日買賣超、技術指標、成交量或 VIX。
 2. 不得補造資料、經濟數字、政策日期、企業資訊或來源。資料日期比今天早是正常現象，必須保留此限制。
 3. 觀察到同向或反向變動，只能寫「一致／不一致」，不能宣稱因果。沒有證據時請明說「目前資料不足」。
+   只有資料列明「約三個月變動」時，才能描述該指標近期上升、下降、緩和或惡化；只有單一最新值時，只能描述目前水位，不能自行補出前期趨勢。
 4. 美股、匯率與殖利率是市場價格；CPI、失業率、工業生產、聯邦基金利率是發布頻率不同的經濟資料。不可把它們混成同一時間點的即時讀數。
 5. 對台灣的影響只能討論傳導機制：出口循環、全球需求、美元與資金成本；不得延伸為特定台灣公司或產業的買賣建議。
 6. 用平實語氣，不使用「必然、確立、噴發、血洗、抄底、追高」等詞。不能給買進、賣出、目標價或持倉比例。

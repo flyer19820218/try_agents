@@ -12,7 +12,6 @@ import csv
 import io
 import json
 import os
-import time as clock
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -73,7 +72,7 @@ def load_local_env() -> None:
             continue
         key, value = line.split("=", 1)
         key = key.strip()
-        if key in {"GEMINI_API_KEY", "GEMINI_MODEL"} and not os.environ.get(key):
+        if key in {"GEMINI_API_KEY", "GEMINI_MODEL", "GEMINI_FALLBACK_MODEL"} and not os.environ.get(key):
             os.environ[key] = value.strip().strip('"').strip("'")
 
 
@@ -286,33 +285,77 @@ def fallback_report(snapshot: dict[str, list[dict[str, Any]]], reason: str) -> s
     )
 
 
-def generate_report(prompt: str, snapshot: dict[str, list[dict[str, Any]]]) -> str:
+def is_temporary_model_error(message: str) -> bool:
+    """Return true only for capacity or rate-limit failures safe to fail over."""
+    lowered = message.lower()
+    return any(
+        token in lowered
+        for token in ("429", "503", "quota", "resource exhausted", "unavailable", "high demand")
+    )
+
+
+def safe_error_summary(message: str) -> str:
+    if is_temporary_model_error(message):
+        return "模型暫時繁忙或額度受限"
+    lowered = message.lower()
+    if any(token in lowered for token in ("401", "403", "api key", "permission")):
+        return "Gemini 金鑰或專案權限無法驗證"
+    return "Gemini API 呼叫失敗"
+
+
+def generate_report(
+    prompt: str, snapshot: dict[str, list[dict[str, Any]]]
+) -> tuple[str, str | None, list[str], str | None]:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        return fallback_report(snapshot, "未設定 GEMINI_API_KEY")
+        return fallback_report(snapshot, "未設定 GEMINI_API_KEY"), None, [], "未設定 GEMINI_API_KEY"
 
     client = genai.Client(api_key=api_key)
-    # Gemini 3.7 Flash is the current stable Flash model. Its default medium
-    # thinking level is retained; older sampling controls such as temperature
-    # are deliberately omitted because they are not supported by this model.
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash")
+    # Gemini 3.7 Flash remains the default. The older Flash model is used only
+    # when Google reports temporary capacity or rate-limit trouble.
+    primary_model = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash").strip()
+    fallback_model = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash").strip()
     config = types.GenerateContentConfig(
         max_output_tokens=2400,
         response_mime_type="text/plain",
     )
-    for attempt in range(2):
+
+    attempted_models = [primary_model]
+    try:
+        response = client.models.generate_content(model=primary_model, contents=prompt, config=config)
+        text = (response.text or "").strip()
+        if text:
+            return text, primary_model, attempted_models, None
+        primary_error = "模型回傳空白內容"
+    except Exception as error:
+        primary_error = str(error)
+        print(f"WARN: {primary_model} did not generate a report: {safe_error_summary(primary_error)}")
+
+    if fallback_model and fallback_model != primary_model and is_temporary_model_error(primary_error):
+        attempted_models.append(fallback_model)
+        print(f"INFO: retrying once with fallback model {fallback_model}.")
         try:
-            response = client.models.generate_content(model=model_name, contents=prompt, config=config)
+            response = client.models.generate_content(model=fallback_model, contents=prompt, config=config)
             text = (response.text or "").strip()
-            return text if text else fallback_report(snapshot, "模型回傳空白內容")
+            if text:
+                return text, fallback_model, attempted_models, None
+            fallback_error = "備援模型回傳空白內容"
         except Exception as error:
-            message = str(error)
-            quota_error = any(token in message.lower() for token in ("429", "quota", "resource exhausted"))
-            if attempt == 0 and not quota_error:
-                clock.sleep(4)
-                continue
-            return fallback_report(snapshot, message)
-    return fallback_report(snapshot, "未知模型錯誤")
+            fallback_error = str(error)
+            print(f"WARN: {fallback_model} did not generate a report: {safe_error_summary(fallback_error)}")
+        return (
+            fallback_report(snapshot, safe_error_summary(fallback_error)),
+            None,
+            attempted_models,
+            safe_error_summary(fallback_error),
+        )
+
+    return (
+        fallback_report(snapshot, safe_error_summary(primary_error)),
+        None,
+        attempted_models,
+        safe_error_summary(primary_error),
+    )
 
 
 def send_telegram_message(text: str) -> None:
@@ -338,7 +381,11 @@ def run_macro_report() -> None:
     now_tw = datetime.now(TW_TZ)
     snapshot = fetch_macro_snapshot()
     term_index = (now_tw.date() - date(2024, 1, 1)).days % len(FINANCE_TERMS)
-    report = generate_report(build_prompt(snapshot, FINANCE_TERMS[term_index]), snapshot)
+    primary_model = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash")
+    fallback_model = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
+    report, model_used, attempted_models, generation_error = generate_report(
+        build_prompt(snapshot, FINANCE_TERMS[term_index]), snapshot
+    )
     send_telegram_message(report)
 
     # Keep legacy keys as harmless empty values so old deployed frontends do not crash.
@@ -346,8 +393,12 @@ def run_macro_report() -> None:
         "updated_at_utc": now_tw.strftime("%Y-%m-%d %H:%M:%S (TW)"),
         "title": f"台灣長線總經觀察 {now_tw:%Y-%m-%d}",
         "report_type": "weekly_macro",
-        "model": os.environ.get("GEMINI_MODEL", "gemini-3.7-flash"),
-        "gemini_requests_this_run": 1 if os.environ.get("GEMINI_API_KEY") else 0,
+        "model": model_used or primary_model,
+        "model_requested": primary_model,
+        "model_fallback": fallback_model,
+        "gemini_requests_this_run": len(attempted_models),
+        "generation_status": "generated" if model_used else "snapshot_fallback",
+        "generation_error": generation_error,
         "report": report,
         "macro_snapshot": snapshot,
         "news": [],

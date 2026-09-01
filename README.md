@@ -24,7 +24,7 @@
 
 4. ⚙️ 低額度自動化
 
-GitHub Actions 在每週一台灣時間 05:09 執行一次。每次完整報告只呼叫 Gemini Flash 一次；模型額度失敗時仍會保存原始資料快照。
+GitHub Actions 在每週一台灣時間 05:09 執行一次。每次完整報告優先呼叫 Gemini 3.7 Flash 一次；若 Google 暫時滿載或限流，才會以 Gemini 2.5 Flash 補一次。兩者皆失敗時仍會保存原始資料快照。
 
 🏗️ System Architecture / 系統架構
 Data Aggregation: FRED 公開經濟時間序列 + yfinance 長週期市場資料。
@@ -33,9 +33,11 @@ Data Processing: 1× Gemini Flash macro synthesis -> Local JSON storage (`latest
 
 ## Gemini model
 
-The default is `gemini-3.7-flash`. Copy `.env.example` to `.env` and add a
-Gemini API key for local runs; GitHub Actions continues to use the existing
-`GEMINI_API_KEY` repository secret. Do not commit `.env`.
+The primary default is `gemini-3.7-flash`; the temporary-capacity fallback is
+`gemini-2.5-flash`. Copy `.env.example` to `.env` and add a Gemini API key for
+local runs; GitHub Actions continues to use the existing `GEMINI_API_KEY`
+repository secret. `GEMINI_FALLBACK_MODEL` is optional, and can be overridden
+locally or in GitHub Actions. Do not commit `.env`.
 
 Frontend Caching: Advanced Streamlit @st.cache_data implementation to prevent memory leaks (Out of Memory) and handle high-frequency wake-ups.
 

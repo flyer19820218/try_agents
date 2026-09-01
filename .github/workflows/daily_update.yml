@@ -1,10 +1,11 @@
-name: Weekly Macro Update
+name: Daily Finance Note and Sunday Macro
 
 on:
   schedule:
-    # 每週一台北時間 05:09（週日 UTC 21:09）。
-    # 經濟資料多為週／月頻；週更可避免用日線雜訊製造結論。
-    - cron: '9 21 * * 0'
+    # 週一至週六台北時間 05:09（UTC 週日到週五 21:09）：每日一則重大財經新聞。
+    - cron: '9 21 * * 0-5'
+    # 星期日台北時間 05:09（UTC 週六 21:09）：完整總經週報取代每日新聞。
+    - cron: '9 21 * * 6'
   workflow_dispatch:
 
 permissions:
@@ -31,4 +32,4 @@ jobs:
       - name: Commit & push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Daily finance update"
+          commit_message: "Update daily finance note or Sunday macro"

@@ -1,4 +1,4 @@
-"""Mobile layout for LINE and standard Android/iOS browser webviews."""
+"""Mobile layout for daily major-finance notes and Sunday macro reports."""
 
 import asyncio
 import base64
@@ -14,7 +14,7 @@ import streamlit.components.v1 as components
 LATEST_FILE = os.environ.get("REPORT_FILE", "data/latest_report.json")
 HISTORY_DIR = "data/history"
 
-st.set_page_config(page_title="長線總經觀察｜手機版", page_icon="📱", layout="wide")
+st.set_page_config(page_title="財經觀察｜手機版", page_icon="📱", layout="wide")
 st.markdown(
     """
 <style>
@@ -43,8 +43,8 @@ def load_json(path):
 
 
 def choose_report():
-    mode = st.radio("檢視模式", ["最新總經觀察", "歷史回顧"], horizontal=True, label_visibility="collapsed")
-    if mode == "最新總經觀察":
+    mode = st.radio("檢視模式", ["最新內容", "歷史回顧"], horizontal=True, label_visibility="collapsed")
+    if mode == "最新內容":
         return load_json(LATEST_FILE)
     try:
         reports = sorted((name for name in os.listdir(HISTORY_DIR) if name.endswith(".json")), reverse=True)
@@ -76,12 +76,13 @@ def macro_cards(data):
 
 
 @st.cache_data(show_spinner=False)
-def generate_audio(text):
+def generate_audio(text, report_type):
     if not text:
         return None
     clean = re.sub(r"[【】#*]", " ", text)
     clean = re.sub(r"[\U00010000-\U0010ffff]", "", clean)
-    script = "以下為本週長線總體經濟觀察。" + clean
+    intro = "以下為本週長線總體經濟觀察。" if report_type == "weekly_macro" else "以下為今日重大財經新聞。"
+    script = intro + clean
 
     async def build_audio():
         communicate = edge_tts.Communicate(script, "zh-TW-HsiaoChenNeural", rate="+5%")
@@ -92,21 +93,30 @@ def generate_audio(text):
         return bytes(chunks)
 
     try:
-        return asyncio.run(build_audio())
+        return asyncio.run(asyncio.wait_for(build_audio(), timeout=8))
     except Exception:
         return None
 
 
 data = choose_report()
 if not data:
-    st.warning("找不到總經資料。請等待下一次週更。")
+    st.warning("找不到最新報告。請等待下一次更新。")
     st.stop()
 
-st.markdown("<div style='font-size:28px;font-weight:900;line-height:1.2;'>🧭 長線總經觀察</div>", unsafe_allow_html=True)
-st.markdown("<div class='report-note'>給 LINE、Chrome 與 Safari 的手機閱讀版｜只看景氣、通膨、利率與金融條件，不收錄即時新聞。</div>", unsafe_allow_html=True)
-st.caption(f"最後更新：{data.get('updated_at_utc', '—')}｜每週一次 Gemini Flash")
+is_macro = data.get("report_type") == "weekly_macro"
+if is_macro:
+    page_title = "🧭 星期日長線總經觀察"
+    page_note = "給 LINE、Chrome 與 Safari 的手機閱讀版｜只看景氣、通膨、利率與金融條件。"
+    cadence = "週日總經週報"
+else:
+    page_title = "📰 每日一則重大財經新聞"
+    page_note = "給 LINE、Chrome 與 Safari 的手機閱讀版｜事實、暫時判讀與推翻條件分開寫。"
+    cadence = "週一至週六每日一篇"
+st.markdown(f"<div style='font-size:28px;font-weight:900;line-height:1.2;'>{page_title}</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='report-note'>{page_note}</div>", unsafe_allow_html=True)
+st.caption(f"最後更新：{data.get('updated_at_utc', '—')}｜{cadence}")
 
-audio = generate_audio(data.get("report", ""))
+audio = generate_audio(data.get("report", ""), data.get("report_type", ""))
 if audio:
     encoded = base64.b64encode(audio).decode()
     components.html(
@@ -114,15 +124,21 @@ if audio:
         height=48,
     )
 
-st.markdown("### 🌡️ 本週總經儀表")
-cards = macro_cards(data)
-if cards:
-    st.markdown(cards, unsafe_allow_html=True)
+if is_macro:
+    st.markdown("### 🌡️ 本週總經儀表")
+    cards = macro_cards(data)
+    if cards:
+        st.markdown(cards, unsafe_allow_html=True)
+    else:
+        st.info("這份舊報告尚未含總經資料卡；下一次週更後會自動補上。")
+    report_heading = "### 🤖 長線研究筆記"
+    source_note = "資料來源：FRED 公開經濟時間序列、Yahoo Finance 長週期資料。"
 else:
-    st.info("這份舊報告尚未含總經資料卡；下一次週更後會自動補上。")
+    report_heading = "### 🤖 今日新聞研究筆記"
+    source_note = "資料來源：Google News RSS 的標題、摘要與原文連結。"
 
-st.markdown("### 🤖 長線判讀")
+st.markdown(report_heading)
 with st.container(border=True):
     st.markdown(data.get("report", "尚未產生報告。"))
 
-st.markdown("<div class='report-note'>資料來源：FRED 公開經濟時間序列、Yahoo Finance 長週期資料。經濟數據有發布落後；本內容僅供研究與教育參考，不構成投資建議。</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='report-note'>{source_note} 經濟資料可能有發布落後；本內容僅供研究與教育參考，不構成投資建議。</div>", unsafe_allow_html=True)

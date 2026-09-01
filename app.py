@@ -1,4 +1,4 @@
-"""Desktop web layout for the long-term macro report."""
+"""Desktop web layout for daily major-finance notes and Sunday macro reports."""
 
 import asyncio
 import base64
@@ -14,7 +14,7 @@ import streamlit.components.v1 as components
 LATEST_FILE = os.environ.get("REPORT_FILE", "data/latest_report.json")
 HISTORY_DIR = "data/history"
 
-st.set_page_config(page_title="長線總經觀察", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="財經觀察", page_icon="📰", layout="wide")
 st.markdown(
     """
 <style>
@@ -48,12 +48,12 @@ def load_json(path):
 def select_report():
     controls, refresh = st.columns([5, 1])
     with controls:
-        mode = st.radio("檢視模式", ["最新總經觀察", "歷史回顧"], horizontal=True, label_visibility="collapsed")
+        mode = st.radio("檢視模式", ["最新內容", "歷史回顧"], horizontal=True, label_visibility="collapsed")
     with refresh:
         if st.button("重新整理", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-    if mode == "最新總經觀察":
+    if mode == "最新內容":
         return load_json(LATEST_FILE)
     try:
         names = sorted((name for name in os.listdir(HISTORY_DIR) if name.endswith(".json")), reverse=True)
@@ -106,12 +106,13 @@ def trend_cards(data):
 
 
 @st.cache_data(show_spinner=False)
-def generate_audio(text):
+def generate_audio(text, report_type):
     if not text:
         return None
     clean = re.sub(r"[【】#*]", " ", text)
     clean = re.sub(r"[\U00010000-\U0010ffff]", "", clean)
-    script = "以下為本週長線總體經濟觀察。" + clean
+    intro = "以下為本週長線總體經濟觀察。" if report_type == "weekly_macro" else "以下為今日重大財經新聞。"
+    script = intro + clean
 
     async def build_audio():
         communicate = edge_tts.Communicate(script, "zh-TW-HsiaoChenNeural", rate="+5%")
@@ -122,44 +123,60 @@ def generate_audio(text):
         return bytes(audio)
 
     try:
-        return asyncio.run(build_audio())
+        return asyncio.run(asyncio.wait_for(build_audio(), timeout=8))
     except Exception:
         return None
 
 
 data = select_report()
 if not data:
-    st.warning("找不到總經資料。請等待下一次週更。")
+    st.warning("找不到最新報告。請等待下一次更新。")
     st.stop()
 
+is_macro = data.get("report_type") == "weekly_macro"
+if is_macro:
+    hero_title = "🧭 星期日長線總經觀察"
+    hero_text = "景氣 · 通膨 · 利率 · 金融條件 · 台灣傳導<br>只留下能跨週期驗證的資料。"
+    cadence = "每週日一篇總經週報"
+else:
+    hero_title = "📰 每日一則重大財經新聞"
+    hero_text = "一則可驗證的重大新聞 · 事實 · 暫時判讀 · 推翻條件<br>排除個股、財報與單日漲跌。"
+    cadence = "週一至週六每日一篇｜週日改發總經週報"
+
 st.markdown(
-    f"<div class='hero'><h1>🧭 長線總經觀察</h1>"
-    f"<p>景氣 · 通膨 · 利率 · 金融條件 · 台灣傳導<br>排除即時新聞與熱門股，只留下能跨週期驗證的資料。</p>"
-    f"<div class='status'>最後更新：{data.get('updated_at_utc', '—')}　｜　每週一次 Gemini Flash</div></div>",
+    f"<div class='hero'><h1>{hero_title}</h1>"
+    f"<p>{hero_text}</p>"
+    f"<div class='status'>最後更新：{data.get('updated_at_utc', '—')}　｜　{cadence}</div></div>",
     unsafe_allow_html=True,
 )
 
-audio = generate_audio(data.get("report", ""))
+audio = generate_audio(data.get("report", ""), data.get("report_type", ""))
 if audio:
     encoded = base64.b64encode(audio).decode()
     components.html(f"<audio controls preload='none' style='width:100%;height:42px' src='data:audio/mp3;base64,{encoded}'></audio>", height=48)
 
-st.markdown("## 🌡️ 總經儀表")
-cards = indicator_cards(data)
-if cards:
-    st.markdown(cards, unsafe_allow_html=True)
+if is_macro:
+    st.markdown("## 🌡️ 總經儀表")
+    cards = indicator_cards(data)
+    if cards:
+        st.markdown(cards, unsafe_allow_html=True)
+    else:
+        st.info("這份舊報告尚未含總經資料卡；下一次週更後會自動補上。")
+
+    st.markdown("## 📈 3／6／12 個月市場趨勢")
+    trends = trend_cards(data)
+    if trends:
+        st.markdown(trends, unsafe_allow_html=True)
+    st.markdown("<div class='method'><strong>怎麼讀：</strong>經濟數據有發布落後，市場價格也不能單獨證明因果。本頁把兩者並列，是為了找出一致與不一致，而不是追逐單日漲跌。</div>", unsafe_allow_html=True)
+    report_heading = "## 🤖 本週總經研究筆記"
+    source_note = "資料來源：FRED 公開經濟時間序列、Yahoo Finance 長週期資料。"
 else:
-    st.info("這份舊報告尚未含總經資料卡；下一次週更後會自動補上。")
+    st.markdown("<div class='method'><strong>怎麼讀：</strong>這不是全天新聞整理。每天只保留一則與全球需求、資金成本、匯率、貿易或能源有關的候選事件；事實、判讀與不能推出的結論分開寫。</div>", unsafe_allow_html=True)
+    report_heading = "## 🤖 今日新聞研究筆記"
+    source_note = "資料來源：Google News RSS 的標題、摘要與原文連結。"
 
-st.markdown("## 📈 3／6／12 個月市場趨勢")
-trends = trend_cards(data)
-if trends:
-    st.markdown(trends, unsafe_allow_html=True)
-
-st.markdown("<div class='method'><strong>怎麼讀：</strong>經濟數據有發布落後，市場價格也不能單獨證明因果。本頁把兩者並列，是為了找出一致與不一致，而不是追逐單日漲跌。</div>", unsafe_allow_html=True)
-
-st.markdown("## 🤖 本週總經判讀")
+st.markdown(report_heading)
 with st.container(border=True):
     st.markdown(data.get("report", "尚未產生報告。"))
 
-st.caption("資料來源：FRED 公開經濟時間序列、Yahoo Finance 長週期資料。內容僅供研究與教育參考，不構成投資建議。")
+st.caption(f"{source_note} 內容僅供研究與教育參考，不構成投資建議。")

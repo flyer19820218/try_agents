@@ -1,6 +1,6 @@
-🚀 Lyu-Science-Cloud Macro Compass | 長線總經觀察
+🚀 Lyu-Science-Cloud Macro Compass | 每日重大財經 × 週日總經
 
-一套以台灣長線投資人為核心的自動化總經觀察系統。每週使用一次 Gemini Flash，把可追溯的經濟時間序列整理成景氣、通膨、利率、金融條件與台灣傳導的觀察報告。
+一套以台灣長線投資人為核心的自動化觀察系統。週一至週六每天精選一則可驗證的重大財經新聞；星期日以可追溯的經濟時間序列整理完整總經週報。
 
 💡 Core Philosophy / 產品核心理念
 "Investing is a marathon, not a sprint." / 「投資是一場馬拉松，而不是百米衝刺。」
@@ -10,7 +10,7 @@
 ✨ Key Features / 核心功能
 1. 🤖 Evidence-calibrated Macro Analysis（總體經濟觀察）
 
-每週以一次 Gemini Flash 呼叫，整理 FRED 經濟資料與長週期市場趨勢。模型不得把相關寫成因果、不得補造資料，也不得給個股買賣建議。
+每日新聞只從央行、通膨、就業、利率、匯率、貿易、能源與系統性金融事件中擇一；星期日才讀取 FRED 與長週期市場資料。兩種報告皆把觀點拆成「事實、暫時判讀、推翻條件」；模型不得把相關寫成因果、不得補造資料，也不得給個股買賣建議。
 
 2. 🎙️ Zero-Latency Neural Voice Broadcast (零延遲神經網路語音播報)
 (EN) Utilizes edge-tts (HsiaoChen Neural Voice) with asynchronous I/O (asyncio) for seamless audio generation. Includes a custom pronunciation dictionary for financial jargon.
@@ -20,24 +20,22 @@
 3. 📱 Dual-Microservice Architecture (雙端微服務架構)
 (EN) Independent routing and UI rendering for Desktop (app.py) and Mobile (mapp.py), featuring customized CSS, responsive grids, and iOS dark-mode fixes.
 
-(TW) 電腦版與手機版獨立架構。手機版具備專屬特務級 UI、動態漲跌方塊、富途牛牛風格的 24H 新聞垂直時間軸，並完美修復 iOS 瀏覽器渲染問題。
+(TW) 電腦版與手機版獨立架構。平日呈現單一重大新聞研究筆記；星期日才呈現總經儀表與長週期趨勢，並保留 iOS Safari 的專屬顯示保護。
 
 4. ⚙️ 低額度自動化
 
-GitHub Actions 在每週一台灣時間 05:09 執行一次。每次完整報告優先呼叫 Gemini 3.7 Flash 一次；若 Google 暫時滿載或限流，或回傳內容不完整，才會以 Gemini 2.5 Flash 補一次。備援會關閉隱藏思考，保留輸出額度給完整報告；兩者皆失敗時仍會保存原始資料快照。
+GitHub Actions 在每週一至週六台灣時間 05:09 發布每日新聞筆記；星期日 05:09 發布完整總經週報。每次只呼叫一次 Gemini 2.5 Flash，並關閉隱藏思考以保留輸出額度；模型失敗時仍會保存原始新聞或總經資料快照。
 
 🏗️ System Architecture / 系統架構
-Data Aggregation: FRED 公開經濟時間序列 + yfinance 長週期市場資料。
+Data Aggregation: Google News RSS 候選新聞（平日）+ FRED 公開經濟時間序列與 yfinance 長週期市場資料（星期日）。
 
-Data Processing: 1× Gemini Flash macro synthesis -> Local JSON storage (`latest_report.json`).
+Data Processing: 1× Gemini 2.5 Flash evidence-calibrated synthesis -> Local JSON storage (`latest_report.json`).
 
 ## Gemini model
 
-The primary default is `gemini-3.7-flash`; the temporary-capacity fallback is
-`gemini-2.5-flash`. Copy `.env.example` to `.env` and add a Gemini API key for
-local runs; GitHub Actions continues to use the existing `GEMINI_API_KEY`
-repository secret. `GEMINI_FALLBACK_MODEL` is optional, and can be overridden
-locally or in GitHub Actions. Do not commit `.env`.
+The project uses only `gemini-2.5-flash`. Copy `.env.example` to `.env` and add
+a Gemini API key for local runs; GitHub Actions continues to use the existing
+`GEMINI_API_KEY` repository secret. Do not commit `.env`.
 
 Frontend Caching: Advanced Streamlit @st.cache_data implementation to prevent memory leaks (Out of Memory) and handle high-frequency wake-ups.
 

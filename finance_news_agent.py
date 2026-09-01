@@ -28,6 +28,16 @@ DATA_DIR = ROOT / "data"
 OUT_FILE = DATA_DIR / "latest_report.json"
 HISTORY_DIR = DATA_DIR / "history"
 TELEGRAM_SAFE_LENGTH = 3800
+MIN_REPORT_CHARACTERS = 1000
+REQUIRED_REPORT_SECTIONS = (
+    "🧭 【長線總經結論】",
+    "🌡️ 【四個總經儀表】",
+    "📈 【趨勢，而非日線】",
+    "🇹🇼 【對台灣長線配置的傳導】",
+    "⚖️ 【目前不能下結論的地方】",
+    "🔎 【未來一季追蹤清單】",
+    "🏫 【曉臻財經小教室】",
+)
 
 FINANCE_TERMS = [
     "景氣循環", "通膨", "實質利率", "殖利率曲線", "金融條件", "失業率",
@@ -295,12 +305,41 @@ def is_temporary_model_error(message: str) -> bool:
 
 
 def safe_error_summary(message: str) -> str:
+    if message.startswith("模型回傳"):
+        return message
     if is_temporary_model_error(message):
         return "模型暫時繁忙或額度受限"
     lowered = message.lower()
     if any(token in lowered for token in ("401", "403", "api key", "permission")):
         return "Gemini 金鑰或專案權限無法驗證"
     return "Gemini API 呼叫失敗"
+
+
+def validate_report(text: str) -> str | None:
+    """Reject partial completions even when the API returns HTTP success."""
+    if not text:
+        return "模型回傳空白內容"
+    if len(text) < MIN_REPORT_CHARACTERS:
+        return f"模型回傳內容過短（少於 {MIN_REPORT_CHARACTERS} 字）"
+    missing_sections = [section for section in REQUIRED_REPORT_SECTIONS if section not in text]
+    if missing_sections:
+        return "模型回傳內容缺少固定段落"
+    return None
+
+
+def is_backup_eligible(reason: str) -> bool:
+    return is_temporary_model_error(reason) or reason.startswith("模型回傳")
+
+
+def generation_config_for(model_name: str) -> types.GenerateContentConfig:
+    """Reserve 2.5 Flash's output budget for the report instead of hidden thought."""
+    options: dict[str, Any] = {
+        "max_output_tokens": 4096,
+        "response_mime_type": "text/plain",
+    }
+    if model_name.startswith("gemini-2.5-"):
+        options["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+    return types.GenerateContentConfig(**options)
 
 
 def generate_report(
@@ -315,34 +354,38 @@ def generate_report(
     # when Google reports temporary capacity or rate-limit trouble.
     primary_model = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash").strip()
     fallback_model = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash").strip()
-    config = types.GenerateContentConfig(
-        max_output_tokens=2400,
-        response_mime_type="text/plain",
-    )
 
     attempted_models = [primary_model]
     try:
-        response = client.models.generate_content(model=primary_model, contents=prompt, config=config)
+        response = client.models.generate_content(
+            model=primary_model,
+            contents=prompt,
+            config=generation_config_for(primary_model),
+        )
         text = (response.text or "").strip()
-        if text:
+        primary_error = validate_report(text)
+        if not primary_error:
             return text, primary_model, attempted_models, None
-        primary_error = "模型回傳空白內容"
     except Exception as error:
         primary_error = str(error)
-        print(f"WARN: {primary_model} did not generate a report: {safe_error_summary(primary_error)}")
+    print(f"WARN: {primary_model} did not generate a report: {safe_error_summary(primary_error)}")
 
-    if fallback_model and fallback_model != primary_model and is_temporary_model_error(primary_error):
+    if fallback_model and fallback_model != primary_model and is_backup_eligible(primary_error):
         attempted_models.append(fallback_model)
         print(f"INFO: retrying once with fallback model {fallback_model}.")
         try:
-            response = client.models.generate_content(model=fallback_model, contents=prompt, config=config)
+            response = client.models.generate_content(
+                model=fallback_model,
+                contents=prompt,
+                config=generation_config_for(fallback_model),
+            )
             text = (response.text or "").strip()
-            if text:
+            fallback_error = validate_report(text)
+            if not fallback_error:
                 return text, fallback_model, attempted_models, None
-            fallback_error = "備援模型回傳空白內容"
         except Exception as error:
             fallback_error = str(error)
-            print(f"WARN: {fallback_model} did not generate a report: {safe_error_summary(fallback_error)}")
+        print(f"WARN: {fallback_model} did not generate a report: {safe_error_summary(fallback_error)}")
         return (
             fallback_report(snapshot, safe_error_summary(fallback_error)),
             None,

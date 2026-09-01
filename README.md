@@ -24,7 +24,7 @@
 
 4. ⚙️ 低額度自動化
 
-GitHub Actions 在每週一台灣時間 05:09 執行一次。每次完整報告優先呼叫 Gemini 3.7 Flash 一次；若 Google 暫時滿載或限流，才會以 Gemini 2.5 Flash 補一次。兩者皆失敗時仍會保存原始資料快照。
+GitHub Actions 在每週一台灣時間 05:09 執行一次。每次完整報告優先呼叫 Gemini 3.7 Flash 一次；若 Google 暫時滿載或限流，或回傳內容不完整，才會以 Gemini 2.5 Flash 補一次。備援會關閉隱藏思考，保留輸出額度給完整報告；兩者皆失敗時仍會保存原始資料快照。
 
 🏗️ System Architecture / 系統架構
 Data Aggregation: FRED 公開經濟時間序列 + yfinance 長週期市場資料。

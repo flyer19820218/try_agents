@@ -29,6 +29,22 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python finance_news_agent.py
 
+      - name: Publish Xiaozhen narration MP3
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          narration_files=(data/audio/*.mp3)
+          if [ ${#narration_files[@]} -eq 0 ]; then
+            echo "No narration file was generated; publishing the written report only."
+            exit 0
+          fi
+          gh release view xiaozhen-narration >/dev/null 2>&1 || \
+            gh release create xiaozhen-narration \
+              --title "曉臻導讀音檔" \
+              --notes "每日重大財經新聞與週日長線總經的完整語音導讀。"
+          gh release upload xiaozhen-narration "${narration_files[@]}" --clobber
+
       - name: Commit & push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:

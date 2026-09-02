@@ -8,6 +8,7 @@ conditions separate; source data remains available if Gemini is unavailable.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import json
@@ -23,6 +24,7 @@ from xml.etree import ElementTree as ET
 
 import requests
 import yfinance as yf
+import edge_tts
 from google import genai
 from google.genai import types
 
@@ -32,6 +34,7 @@ ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 OUT_FILE = DATA_DIR / "latest_report.json"
 HISTORY_DIR = DATA_DIR / "history"
+AUDIO_DIR = DATA_DIR / "audio"
 TELEGRAM_SAFE_LENGTH = 3800
 MIN_REPORT_CHARACTERS = 1000
 DAILY_MIN_REPORT_CHARACTERS = 450
@@ -52,6 +55,9 @@ DAILY_REQUIRED_REPORT_SECTIONS = (
     "🏫 【曉臻財經小教室】",
 )
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+NARRATION_VOICE = "zh-TW-HsiaoChenNeural"
+NARRATION_RELEASE_TAG = "xiaozhen-narration"
+NARRATION_TIMEOUT_SECONDS = 120
 
 # Google News RSS offers source links and headline-level evidence without a paid
 # news API. The queries deliberately exclude individual earnings and daily stock moves.
@@ -129,6 +135,96 @@ def save_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
         json.dump(payload, file, ensure_ascii=False, indent=2)
+
+
+def save_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+
+
+def narration_intro(report_type: str) -> str:
+    if report_type == "weekly_macro":
+        return "曉臻老師，為你導讀本週長線總體經濟觀察。"
+    return "曉臻老師，為你導讀今天的一則重大財經新聞。"
+
+
+def narration_script(report: str, report_type: str) -> str:
+    """Turn the Markdown report into a natural script without reading URLs aloud."""
+    text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", report)
+    text = re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"[*#>`_]", "", text)
+    text = re.sub(r"[【】]", "。", text)
+    text = re.sub(r"[\U00010000-\U0010ffff]", "", text)
+    text = re.sub(r"\n{2,}", "\n", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return f"{narration_intro(report_type)}\n{text.strip()}"
+
+
+def synthesize_narration(report: str, report_type: str) -> tuple[bytes | None, str | None]:
+    """Create a complete narration outside the web request path.
+
+    Failure is deliberately non-fatal: the evidence report must still publish if
+    Microsoft's public voice endpoint is temporarily unavailable.
+    """
+    script = narration_script(report, report_type)
+    if not script.strip():
+        return None, "導讀稿為空白"
+
+    async def build_audio() -> bytes:
+        communicate = edge_tts.Communicate(
+            script,
+            NARRATION_VOICE,
+            rate="+5%",
+        )
+        chunks = bytearray()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                chunks.extend(chunk["data"])
+        return bytes(chunks)
+
+    try:
+        audio = asyncio.run(asyncio.wait_for(build_audio(), timeout=NARRATION_TIMEOUT_SECONDS))
+    except Exception as error:
+        return None, f"語音生成失敗：{type(error).__name__}"
+    if not audio:
+        return None, "語音服務未回傳音檔"
+    return audio, None
+
+
+def narration_public_url(asset_name: str, generated_at: datetime) -> str | None:
+    repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if not repository:
+        return None
+    version = generated_at.strftime("%Y%m%d%H%M%S")
+    return (
+        f"https://github.com/{repository}/releases/download/"
+        f"{NARRATION_RELEASE_TAG}/{asset_name}?v={version}"
+    )
+
+
+def create_narration(report: str, report_type: str, generated_at: datetime) -> dict[str, Any]:
+    """Save an ignored MP3 for release upload and return safe player metadata."""
+    kind = "weekly-macro" if report_type == "weekly_macro" else "daily-major-news"
+    asset_name = f"xiaozhen-{kind}-{generated_at:%Y-%m-%d}.mp3"
+    audio, error = synthesize_narration(report, report_type)
+    if not audio:
+        return {
+            "status": "unavailable",
+            "voice": NARRATION_VOICE,
+            "release_tag": NARRATION_RELEASE_TAG,
+            "asset_name": asset_name,
+            "error": error,
+        }
+    local_path = AUDIO_DIR / asset_name
+    save_bytes(local_path, audio)
+    return {
+        "status": "ready",
+        "voice": NARRATION_VOICE,
+        "release_tag": NARRATION_RELEASE_TAG,
+        "asset_name": asset_name,
+        "local_path": str(local_path.relative_to(ROOT)),
+        "public_url": narration_public_url(asset_name, generated_at),
+    }
 
 
 def latest_on_or_before(rows: list[tuple[date, float]], target: date) -> tuple[date, float] | None:
@@ -653,6 +749,7 @@ def run_macro_report() -> None:
         lambda reason: fallback_report(snapshot, reason),
     )
     send_telegram_message(report)
+    narration = create_narration(report, "weekly_macro", now_tw)
 
     # Keep legacy keys as harmless empty values so old deployed frontends do not crash.
     payload = {
@@ -665,6 +762,7 @@ def run_macro_report() -> None:
         "generation_status": "generated" if model_used else "snapshot_fallback",
         "generation_error": generation_error,
         "report": report,
+        "narration": narration,
         "macro_snapshot": snapshot,
         "news": [],
         "risk_indicators": {"vix": "-", "vix_trend": "", "usd_twd": "-", "usd_trend": ""},
@@ -700,6 +798,7 @@ def run_daily_news_report() -> None:
         report = daily_fallback_report(candidates, today_term, generation_error)
 
     send_telegram_message(report)
+    narration = create_narration(report, "daily_major_news", now_tw)
     payload = {
         "updated_at_utc": now_tw.strftime("%Y-%m-%d %H:%M:%S (TW)"),
         "title": f"每日重大財經新聞 {now_tw:%Y-%m-%d}",
@@ -710,6 +809,7 @@ def run_daily_news_report() -> None:
         "generation_status": "generated" if model_used else "news_snapshot_fallback",
         "generation_error": generation_error,
         "report": report,
+        "narration": narration,
         "macro_snapshot": {},
         "news": [selected_news] if selected_news else [],
         "risk_indicators": {"vix": "-", "vix_trend": "", "usd_twd": "-", "usd_trend": ""},

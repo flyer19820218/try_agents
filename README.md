@@ -12,10 +12,10 @@
 
 每日新聞只從央行、通膨、就業、利率、匯率、貿易、能源與系統性金融事件中擇一；星期日才讀取 FRED 與長週期市場資料。兩種報告皆把觀點拆成「事實、暫時判讀、推翻條件」；模型不得把相關寫成因果、不得補造資料，也不得給個股買賣建議。
 
-2. 🎙️ Zero-Latency Neural Voice Broadcast (零延遲神經網路語音播報)
-(EN) Utilizes edge-tts (HsiaoChen Neural Voice) with asynchronous I/O (asyncio) for seamless audio generation. Includes a custom pronunciation dictionary for financial jargon.
+2. 🎙️ Xiaozhen Full Narration（曉臻完整導讀）
+(EN) The scheduled job creates a complete HsiaoChen Neural MP3 after each report, then publishes it as a GitHub Release asset. The web page only plays the prepared file, so readers never wait for text-to-speech during page loading.
 
-(TW) 採用 edge-tts 神經語音引擎，結合 asyncio 協程技術達成前端零延遲播放。內建專屬財經破音字字典（如：重挫、重擊）以確保播報專業度。
+(TW) 每份報告完成後，排程會以 edge-tts 的曉臻語音產生完整 MP3，並發布為 GitHub Release 音檔。網頁只播放已備好的音檔，不會在使用者開頁時才即時合成；手機可直接播放，也可開啟 MP3 另存供通勤離線收聽。
 
 3. 📱 Dual-Microservice Architecture (雙端微服務架構)
 (EN) Independent routing and UI rendering for Desktop (app.py) and Mobile (mapp.py), featuring customized CSS, responsive grids, and iOS dark-mode fixes.
@@ -29,7 +29,7 @@ GitHub Actions 在每週一至週六台灣時間 05:09 發布每日新聞筆記�
 🏗️ System Architecture / 系統架構
 Data Aggregation: Google News RSS 候選新聞（平日）+ FRED 公開經濟時間序列與 yfinance 長週期市場資料（星期日）。
 
-Data Processing: 1× Gemini 2.5 Flash evidence-calibrated synthesis -> Local JSON storage (`latest_report.json`).
+Data Processing: 1× Gemini 2.5 Flash evidence-calibrated synthesis -> report JSON + an HsiaoChen narration MP3 published outside Git history.
 
 ## Gemini model
 

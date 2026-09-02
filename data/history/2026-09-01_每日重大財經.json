@@ -1,0 +1,38 @@
+{
+  "updated_at_utc": "2026-09-01 20:59:34 (TW)",
+  "title": "每日重大財經新聞 2026-09-01",
+  "report_type": "daily_major_news",
+  "model": "gemini-2.5-flash",
+  "model_requested": "gemini-2.5-flash",
+  "gemini_requests_this_run": 1,
+  "generation_status": "generated",
+  "generation_error": null,
+  "report": "📰 【今日一則重大財經新聞】\n標題：歐元區8月通膨率3.3%創近3年新高歐央預料10日再升息| 全球財經| 全球 - UDN\n來源：UDN｜發布：2026-09-01 20:27（台灣時間）\n觀察類別：貨幣政策／資金成本\n原文：[開啟原始報導](https://news.google.com/rss/articles/CBMic0FVX3lxTE80U0g3aDdrem41YUx1ak15WVl6R0pQNjhkNVZwVmRLSHBFY3pIZkkzYnNZQzctd1dQTFk1b2lsUXVjTkFPX0IxSjRPc0kwVFJlS1pUZEtfRVl1SGZYeDF2RVc4SWN3TllDcTVvVDNCeXM1T00?oc=5)\n\n🎯 【為何選這一則】\n事實：根據 UDN 於 2026-09-01 20:27（台灣時間）的報導，歐元區 8 月通膨率達到 3.3%，創下近三年新高，且歐洲央行預計將在 10 日再次升息。\n\n🧭 【暫時判讀】\n若歐元區通膨持續走高，可能透過歐洲央行進一步升息，影響全球資金成本，特別是提高歐元計價債務的融資成本。\n驗證條件：歐洲央行於 10 日公布的利率決議與相關聲明。\n\n⚖️ 【不能推出什麼】\n1. 這則新聞不足以判定歐洲央行在 10 日會升息的具體幅度。\n2. 僅憑歐元區 8 月通膨數據，無法推論全球主要央行的貨幣政策將會一致收緊。\n\n🔎 【接下來追蹤】\n1. 歐洲央行預計於 10 日公布的最新利率決議。\n2. 歐元區 9 月份的消費者物價指數（CPI）數據。\n3. 歐洲央行總裁關於未來貨幣政策路徑的公開發言。\n\n🏫 【曉臻財經小教室】\n今日單字：【實質利率】\n實質利率是指名目利率扣除通膨率後的利率，反映了資金在購買力上的實際收益或成本。\n最常見的錯誤解讀是將名目利率直接視為投資的真實回報，而忽略了通膨對購買力的侵蝕。\n\n保持客觀，耐心等待更多數據驗證。",
+  "macro_snapshot": {},
+  "news": [
+    {
+      "title": "歐元區8月通膨率3.3%創近3年新高歐央預料10日再升息| 全球財經| 全球 - UDN",
+      "summary": "歐元區8月通膨率3.3%創近3年新高歐央預料10日再升息| 全球財經| 全球 UDN",
+      "source": "UDN",
+      "link": "https://news.google.com/rss/articles/CBMic0FVX3lxTE80U0g3aDdrem41YUx1ak15WVl6R0pQNjhkNVZwVmRLSHBFY3pIZkkzYnNZQzctd1dQTFk1b2lsUXVjTkFPX0IxSjRPc0kwVFJlS1pUZEtfRVl1SGZYeDF2RVc4SWN3TllDcTVvVDNCeXM1T00?oc=5",
+      "published_at": "2026-09-01 20:27（台灣時間）",
+      "category": "全球總經",
+      "importance_score": 3,
+      "id": 2
+    }
+  ],
+  "risk_indicators": {
+    "vix": "-",
+    "vix_trend": "",
+    "usd_twd": "-",
+    "usd_trend": ""
+  },
+  "narration": {
+    "status": "ready",
+    "voice": "zh-TW-HsiaoChenNeural",
+    "release_tag": "xiaozhen-narration",
+    "asset_name": "xiaozhen-daily-major-news-2026-09-01.mp3",
+    "local_path": "data/audio/xiaozhen-daily-major-news-2026-09-01.mp3",
+    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-daily-major-news-2026-09-01.mp3?v=20260901205934"
+  }
+}

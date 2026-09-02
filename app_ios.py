@@ -5,15 +5,12 @@ stays separate from mapp.py because Safari webviews need stricter width and text
 scaling protection.
 """
 
-import asyncio
-import base64
 import json
 import os
-import re
 
-import edge_tts
 import streamlit as st
-import streamlit.components.v1 as components
+
+from narration import render_narration
 
 
 LATEST_FILE = os.environ.get("REPORT_FILE", "data/latest_report.json")
@@ -81,29 +78,6 @@ def macro_cards(data):
     return "<div class='ios-macro-grid'>" + "".join(parts) + "</div>" if parts else ""
 
 
-@st.cache_data(show_spinner=False)
-def generate_audio(text, report_type):
-    if not text:
-        return None
-    clean = re.sub(r"[【】#*]", " ", text)
-    clean = re.sub(r"[\U00010000-\U0010ffff]", "", clean)
-    intro = "以下為本週長線總體經濟觀察。" if report_type == "weekly_macro" else "以下為今日重大財經新聞。"
-    script = intro + clean
-
-    async def build_audio():
-        communicate = edge_tts.Communicate(script, "zh-TW-HsiaoChenNeural", rate="+5%")
-        chunks = bytearray()
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                chunks.extend(chunk["data"])
-        return bytes(chunks)
-
-    try:
-        return asyncio.run(asyncio.wait_for(build_audio(), timeout=8))
-    except Exception:
-        return None
-
-
 data = choose_report()
 if not data:
     st.warning("找不到最新報告。請等待下一次更新。")
@@ -122,13 +96,7 @@ st.markdown(f"<div style='font-size:30px;font-weight:900;line-height:1.2;'>{page
 st.markdown(f"<div class='ios-note'>{page_note}</div>", unsafe_allow_html=True)
 st.caption(f"最後更新：{data.get('updated_at_utc', '—')}｜{cadence}")
 
-audio = generate_audio(data.get("report", ""), data.get("report_type", ""))
-if audio:
-    encoded = base64.b64encode(audio).decode()
-    components.html(
-        f"<audio controls playsinline preload='none' style='width:100%;height:42px' src='data:audio/mp3;base64,{encoded}'></audio>",
-        height=48,
-    )
+render_narration(data)
 
 if is_macro:
     st.markdown("### 🌡️ 本週總經儀表")

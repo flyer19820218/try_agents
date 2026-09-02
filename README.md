@@ -10,7 +10,7 @@
 ✨ Key Features / 核心功能
 1. 🤖 Evidence-calibrated Macro Analysis（總體經濟觀察）
 
-每日新聞只從央行、通膨、就業、利率、匯率、貿易、能源與系統性金融事件中擇一；星期日才讀取 FRED 與長週期市場資料。兩種報告皆把觀點拆成「事實、暫時判讀、推翻條件」；模型不得把相關寫成因果、不得補造資料，也不得給個股買賣建議。
+每日新聞只從央行、通膨、就業、利率、匯率、貿易、能源與系統性金融事件中擇一。系統會先還原 Google News 的原始連結、讀取該篇公開正文，再生成一篇完整的單題研究；星期日才讀取 FRED 與長週期市場資料。兩種報告皆把觀點拆成「事實、暫時判讀、推翻條件」；模型不得把相關寫成因果、不得補造資料，也不得給個股買賣建議。
 
 2. 🎙️ Xiaozhen Full Narration（曉臻完整導讀）
 (EN) The scheduled job creates a complete HsiaoChen Neural MP3 after each report, then publishes it as a GitHub Release asset. The web page only plays the prepared file, so readers never wait for text-to-speech during page loading.
@@ -27,7 +27,7 @@
 GitHub Actions 在每週一至週六台灣時間 05:09 發布每日新聞筆記；星期日 05:09 發布完整總經週報。每次只呼叫一次 Gemini 2.5 Flash，並關閉隱藏思考以保留輸出額度；模型失敗時仍會保存原始新聞或總經資料快照。
 
 🏗️ System Architecture / 系統架構
-Data Aggregation: Google News RSS 候選新聞（平日）+ FRED 公開經濟時間序列與 yfinance 長週期市場資料（星期日）。
+Data Aggregation: Google News RSS 候選新聞與選定來源的公開正文（平日）+ FRED 公開經濟時間序列與 yfinance 長週期市場資料（星期日）。
 
 Data Processing: 1× Gemini 2.5 Flash evidence-calibrated synthesis -> report JSON + an HsiaoChen narration MP3 published outside Git history.
 

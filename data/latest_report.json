@@ -26,5 +26,13 @@
     "vix_trend": "",
     "usd_twd": "-",
     "usd_trend": ""
+  },
+  "narration": {
+    "status": "ready",
+    "voice": "zh-TW-HsiaoChenNeural",
+    "release_tag": "xiaozhen-narration",
+    "asset_name": "xiaozhen-daily-major-news-2026-09-02.mp3",
+    "local_path": "data/audio/xiaozhen-daily-major-news-2026-09-02.mp3",
+    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-daily-major-news-2026-09-02.mp3?v=20260902162419"
   }
 }

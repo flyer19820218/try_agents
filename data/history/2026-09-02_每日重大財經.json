@@ -1,24 +1,32 @@
 {
-  "updated_at_utc": "2026-09-02 16:24:19 (TW)",
+  "updated_at_utc": "2026-09-02 16:48:55 (TW)",
   "title": "每日重大財經新聞 2026-09-02",
   "report_type": "daily_major_news",
   "model": "gemini-2.5-flash",
   "model_requested": "gemini-2.5-flash",
-  "gemini_requests_this_run": 0,
-  "generation_status": "news_snapshot_fallback",
-  "generation_error": "未設定 GEMINI_API_KEY",
-  "report": "📰 【今日一則重大財經新聞】\n標題：學者：AI通膨對CPI影響不大央行9月升息機率不高| 產經 - 中央社 CNA\n來源：中央社 CNA｜發布：2026-09-01 20:05（台灣時間）\n觀察類別：貨幣政策／資金成本\n原文：[開啟原始報導](https://news.google.com/rss/articles/CBMiXkFVX3lxTE1fSnFjZ3pEMU9SRHEtS3UwbERVRWhaV3pZTGpLZkJZTHRWeHpOSlMtSVQxUlY1Q25JT1dZRGRFN1FFQmdQXzlrSWlRb0MtX19VR3pXNzZOeVlCOEoyVmc?oc=5)\n\n🎯 【為何選這一則】\n事實：Google News RSS 收錄此標題與摘要，來源為 中央社 CNA。\n這則新聞被列為每日候選，因為它屬於上方的觀察類別；本次未取得 AI 研究整理。\n\n🧭 【暫時判讀】\n候選資料不足以建立可靠傳導判讀；應先閱讀原始報導與官方資料。\n驗證條件：後續官方公告或可追溯經濟數據。\n\n⚖️ 【不能推出什麼】\n- 單一標題不等於整體景氣轉折。\n- 單一新聞不足以形成交易判斷。\n\n🔎 【接下來追蹤】\n- 原始報導與官方文件。\n- 同一議題的後續數據。\n- 是否出現跨市場的一致反應。\n\n🏫 【曉臻財經小教室】\n今日單字：【殖利率曲線】\n總經名詞需要放回資料時間序列中理解，單一標題不能取代資料。\n\n先求證，再判讀。",
+  "gemini_requests_this_run": 1,
+  "generation_status": "generated",
+  "generation_error": null,
+  "report": "📰 【今日一則重大財經新聞】\n標題：公債殖利率飆升政府借貸成本再升高加大政策制定者壓力| 全球財經| 全球 - UDN\n來源：UDN｜發布：2026-09-02 14:29（台灣時間）\n觀察類別：貨幣政策／資金成本\n原文：[開啟原始報導](https://news.google.com/rss/articles/CBMic0FVX3lxTE9kTEtIOWp6VUNyN3BCb3BnMFpBLWNvQUJCOS14cG9vNUxKSVNGTDhpM0t6cHROMUpPbHI3dDlXU0tnWFdWeGZIYzMxX0U1M1FyVTFUWHFqOVlpT1l0dFJ1OHFua094NTY2WjlHVWl0dV9oM1E?oc=5)\n\n🎯 【為何選這一則】\n事實：UDN 於台灣時間 2026-09-02 14:29 報導，公債殖利率飆升，導致政府借貸成本再度升高，這將加大政策制定者的壓力。\n\n🧭 【暫時判讀】\n若政府借貸成本因公債殖利率飆升而持續攀高，可能透過排擠其他政府支出、增加預算壓力等方式，進而影響各國的財政政策彈性與長期經濟穩定性。\n驗證條件：各國政府未來發債利率、政府預算報告或財政部聲明。\n\n⚖️ 【不能推出什麼】\n這則新聞未指出公債殖利率飆升的具體原因，亦不能推論個別國家或地區的財政壓力程度。\n這則新聞未提供公債殖利率飆升的確切幅度或持續時間，不足以判定對全球經濟成長的短期影響。\n\n🔎 【接下來追蹤】\n1. 主要經濟體政府債券殖利率的持續變化。\n2. 各國央行或財政部對公債市場狀況的最新聲明。\n3. 國際貨幣基金組織（IMF）或世界銀行關於全球政府債務壓力的報告。\n\n🏫 【曉臻財經小教室】\n今日單字：【殖利率曲線】\n殖利率曲線描繪了不同到期日（如三個月、兩年、十年等）的同類債券，在某一特定時間點上的殖利率。最常見的錯誤解讀是，單純將殖利率曲線的升降視為股市漲跌的直接訊號。\n\n保持客觀，耐心等待更多事實驗證。",
+  "narration": {
+    "status": "ready",
+    "voice": "zh-TW-HsiaoChenNeural",
+    "release_tag": "xiaozhen-narration",
+    "asset_name": "xiaozhen-daily-major-news-2026-09-02.mp3",
+    "local_path": "data/audio/xiaozhen-daily-major-news-2026-09-02.mp3",
+    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-daily-major-news-2026-09-02.mp3?v=20260902164855"
+  },
   "macro_snapshot": {},
   "news": [
     {
-      "title": "學者：AI通膨對CPI影響不大央行9月升息機率不高| 產經 - 中央社 CNA",
-      "summary": "學者：AI通膨對CPI影響不大央行9月升息機率不高| 產經 中央社 CNA",
-      "source": "中央社 CNA",
-      "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE1fSnFjZ3pEMU9SRHEtS3UwbERVRWhaV3pZTGpLZkJZTHRWeHpOSlMtSVQxUlY1Q25JT1dZRGRFN1FFQmdQXzlrSWlRb0MtX19VR3pXNzZOeVlCOEoyVmc?oc=5",
-      "published_at": "2026-09-01 20:05（台灣時間）",
+      "title": "公債殖利率飆升政府借貸成本再升高加大政策制定者壓力| 全球財經| 全球 - UDN",
+      "summary": "公債殖利率飆升政府借貸成本再升高加大政策制定者壓力| 全球財經| 全球 UDN",
+      "source": "UDN",
+      "link": "https://news.google.com/rss/articles/CBMic0FVX3lxTE9kTEtIOWp6VUNyN3BCb3BnMFpBLWNvQUJCOS14cG9vNUxKSVNGTDhpM0t6cHROMUpPbHI3dDlXU0tnWFdWeGZIYzMxX0U1M1FyVTFUWHFqOVlpT1l0dFJ1OHFua094NTY2WjlHVWl0dV9oM1E?oc=5",
+      "published_at": "2026-09-02 14:29（台灣時間）",
       "category": "全球總經",
-      "importance_score": 5,
-      "id": 1
+      "importance_score": 3,
+      "id": 5
     }
   ],
   "risk_indicators": {
@@ -26,13 +34,5 @@
     "vix_trend": "",
     "usd_twd": "-",
     "usd_trend": ""
-  },
-  "narration": {
-    "status": "ready",
-    "voice": "zh-TW-HsiaoChenNeural",
-    "release_tag": "xiaozhen-narration",
-    "asset_name": "xiaozhen-daily-major-news-2026-09-02.mp3",
-    "local_path": "data/audio/xiaozhen-daily-major-news-2026-09-02.mp3",
-    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-daily-major-news-2026-09-02.mp3?v=20260902162419"
   }
 }

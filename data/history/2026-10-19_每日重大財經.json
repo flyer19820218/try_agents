@@ -1,0 +1,39 @@
+{
+  "updated_at_utc": "2026-10-19 07:03:23 (TW)",
+  "title": "每日重大財經新聞 2026-10-19",
+  "report_type": "daily_major_news",
+  "model": "gemini-2.5-flash",
+  "model_requested": "gemini-2.5-flash",
+  "gemini_requests_this_run": 1,
+  "generation_status": "news_snapshot_fallback",
+  "generation_error": "模型暫時繁忙或額度受限",
+  "report": "📰 【今日一則重大財經新聞】\n標題：殖利率升破逾20年高位 富蘭克林：投資三招迎戰 | 金融脈動 | 金融 - 經濟日報\n來源：經濟日報｜發布：2026-10-18 10:33（台灣時間）\n觀察類別：貨幣政策／資金成本\n原文：[開啟原始報導](https://news.google.com/rss/articles/CBMid0FVX3lxTE1zcDR3aklGMGpSdWl4TkdnMC11SjBDZU96RzRtUHpwZzRTbjZGUjNNS2dnc3Y5V2NqQnhnUFJJM0FSdjJ4YWJITjNRX3R3UkxwdUNSZHRYdGVwNHBYQ3JiSHZEcGl5Nm1RTFJ3WUZZekNfSHFHdnBr?oc=5)\n\n🎯 【為何選這一則】\n事實：Google News RSS 收錄此標題與摘要，來源為 經濟日報。\n這則新聞被列為每日候選，因為它屬於上方的觀察類別；本次未取得 AI 研究整理。\n\n🧭 【暫時判讀】\n候選資料不足以建立可靠傳導判讀；應先閱讀原始報導與官方資料。\n驗證條件：後續官方公告或可追溯經濟數據。\n\n⚖️ 【不能推出什麼】\n- 單一標題不等於整體景氣轉折。\n- 單一新聞不足以形成交易判斷。\n\n🔎 【接下來追蹤】\n- 原始報導與官方文件。\n- 同一議題的後續數據。\n- 是否出現跨市場的一致反應。\n\n🏫 【曉臻財經小教室】\n今日單字：【實質利率】\n總經名詞需要放回資料時間序列中理解，單一標題不能取代資料。\n\n先求證，再判讀。",
+  "narration": {
+    "status": "ready",
+    "voice": "zh-TW-HsiaoChenNeural",
+    "release_tag": "xiaozhen-narration",
+    "asset_name": "xiaozhen-daily-major-news-2026-10-19.mp3",
+    "local_path": "data/audio/xiaozhen-daily-major-news-2026-10-19.mp3",
+    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-daily-major-news-2026-10-19.mp3?v=20261019070323"
+  },
+  "macro_snapshot": {},
+  "news": [
+    {
+      "title": "殖利率升破逾20年高位 富蘭克林：投資三招迎戰 | 金融脈動 | 金融 - 經濟日報",
+      "summary": "殖利率升破逾20年高位 富蘭克林：投資三招迎戰 | 金融脈動 | 金融 經濟日報",
+      "source": "經濟日報",
+      "link": "https://news.google.com/rss/articles/CBMid0FVX3lxTE1zcDR3aklGMGpSdWl4TkdnMC11SjBDZU96RzRtUHpwZzRTbjZGUjNNS2dnc3Y5V2NqQnhnUFJJM0FSdjJ4YWJITjNRX3R3UkxwdUNSZHRYdGVwNHBYQ3JiSHZEcGl5Nm1RTFJ3WUZZekNfSHFHdnBr?oc=5",
+      "published_at": "2026-10-18 10:33（台灣時間）",
+      "category": "全球總經",
+      "importance_score": 4,
+      "id": 1,
+      "source_url": "https://news.google.com/rss/articles/CBMid0FVX3lxTE1zcDR3aklGMGpSdWl4TkdnMC11SjBDZU96RzRtUHpwZzRTbjZGUjNNS2dnc3Y5V2NqQnhnUFJJM0FSdjJ4YWJITjNRX3R3UkxwdUNSZHRYdGVwNHBYQ3JiSHZEcGl5Nm1RTFJ3WUZZekNfSHFHdnBr?oc=5"
+    }
+  ],
+  "risk_indicators": {
+    "vix": "-",
+    "vix_trend": "",
+    "usd_twd": "-",
+    "usd_trend": ""
+  }
+}

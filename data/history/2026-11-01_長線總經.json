@@ -1,0 +1,176 @@
+{
+  "updated_at_utc": "2026-11-01 08:01:57 (TW)",
+  "title": "台灣長線總經觀察 2026-11-01",
+  "report_type": "weekly_macro",
+  "model": "gemini-2.5-flash",
+  "model_requested": "gemini-2.5-flash",
+  "gemini_requests_this_run": 1,
+  "generation_status": "generated",
+  "generation_error": null,
+  "report": "🧭 【本期核心判讀】\n事實：美國 CPI 年增率 3.72%（2026-09-01），約三個月變動 +0.26 個百分點；聯邦基金利率 3.75%（2026-09-01），約三個月變動 +0.12 個百分點；美國工業生產年增率 2.25%（2026-09-01），約三個月變動 +0.79 個百分點。\n暫時判讀：美國通膨似有升溫跡象，然聯準會升息步伐趨緩，成長動能似見加速，資金成本仍為主要制約。\n推翻條件：未來一季美國核心 CPI 年增率持續上升，或美國 10 年期公債殖利率出現明顯回落。\n\n🧾 【四個儀表：事實、判讀、推翻條件】\n成長\n事實：美國失業率 4.20%（2026-09-01）；美國工業生產年增率 2.25%（2026-09-01），約三個月變動 +0.79 個百分點。\n暫時判讀：美國失業率維持不變，工業生產年增率明顯上升，資料較符合經濟成長動能正在加速的狀態。\n推翻條件：未來一季美國失業率明顯上升。\n\n通膨\n事實：美國 CPI 年增率 3.72%（2026-09-01），約三個月變動 +0.26 個百分點；美國核心 CPI 年增率 2.57%（2026-09-01），約三個月變動 +0.00 個百分點。\n暫時判讀：總體通膨上升，核心通膨維持不變，資料較不符合通膨壓力全面緩解的狀態。\n推翻條件：未來一季美國核心 CPI 年增率明顯下降。\n\n貨幣政策\n事實：聯邦基金利率 3.75%（2026-09-01），約三個月變動 +0.12 個百分點。\n暫時判讀：聯邦基金利率持續小幅上升，資料較符合聯準會仍處於緊縮週期的狀態。\n推翻條件：未來一季聯邦基金利率維持不變或下降。\n\n金融條件\n事實：美債 10Y−2Y 利差 0.38百分點（2026-10-30），約三個月變動 -0.13 百分點；美國 10 年期公債殖利率 4.93（2026-10-30），3m +27bp。\n暫時判讀：殖利率曲線利差收窄，長期公債殖利率上升，資料較符合金融條件持續收緊的狀態。\n推翻條件：未來一季美債 10Y−2Y 利差明顯擴大。\n\n📈 【趨勢是否互相支持】\n事實：美國 CPI 年增率 3.72%（2026-09-01），約三個月變動 +0.26 個百分點；美國 10 年期公債殖利率 4.93（2026-10-30），3m +27bp。\n暫時判讀：美國 CPI 年增率與美國 10 年期公債殖利率在過去三個月均呈現上升，可能反映通膨預期與長期利率的同向變動。\n不能推出什麼：單從這兩項資料不能推論兩者之間必然存在因果關係，且資料發布頻率不同。\n\n事實：S&P 500 在過去六個月上漲 6.22%（2026-10-30）；美國工業生產年增率 2.25%（2026-09-01），約三個月變動 +0.79 個百分點。\n暫時判讀：美股在過去六個月持續上漲，美國工業生產年增率亦有所加速，這兩項趨勢可能支持美國經濟活動仍具動能的判斷。\n不能推出什麼：這兩項資料不足以推論美國經濟成長動能是否會持續支撐股市表現。\n\n事實：台灣加權指數在過去十二個月上漲 59.79%（2026-10-30）；美元／台幣在過去十二個月上漲 6.63%（2026-10-30）。\n暫時判讀：台灣股市在過去一年大幅上漲的同時，美元兌台幣也呈現升值，這兩項趨勢可能反映外部資金流動與匯率變動的複雜關係。\n不能推出什麼：單純的趨勢一致性不能證明這些變動是互相因果，也無法說明個別市場參與者的行為。\n\n🇹🇼 【台灣傳導：事實與驗證】\n全球需求\n外部事實：美國工業生產年增率 2.25%（2026-09-01），約三個月變動 +0.79 個百分點；S&P 500 在過去十二個月上漲 10.01%（2026-10-30）。\n可能傳導：美國工業生產的加速與股市的上漲，可能代表全球對商品與服務的需求有所回溫，進而透過出口循環對台灣經濟產生正面影響。\n仍待驗證：台灣未來一季的出口數據或製造業採購經理人指數是否出現明顯改善。\n\n匯率\n外部事實：美元／台幣 32.57（2026-10-30），3m +0.67%；美元指數 DXY 101.88（2026-10-30），3m +1.87%。\n可能傳導：美元在過去三個月相對台幣與一籃子貨幣皆呈現升值，這可能導致台灣進口成本上升，並對出口商的台幣營收產生有利影響。\n仍待驗證：未來一季台灣消費者物價指數（CPI）中進口商品分項的變化，以及台灣出口廠商的財報表現。\n\n資金成本\n外部事實：美國 10 年期公債殖利率 4.93（2026-10-30），3m +27bp；聯邦基金利率 3.75%（2026-09-01）。\n可能傳導：美國長短期利率持續走高，可能導致全球美元流動性趨緊，進而提高台灣企業透過美元融資的成本，或影響外資在台灣的投資意願。\n仍待驗證：未來一季台灣銀行間拆款利率的變動，以及外資對台灣股市與債市的淨流向。\n\n⚖️ 【資料不能告訴我們什麼】\n1. 資料發布落後：美國 CPI、失業率、工業生產及聯邦基金利率的最新資料日為 2026-09-01，距離報告撰寫日已過一個月，無法即時反映經濟現況。\n2. 相關不等於因果：儘管部分指標的變動方向一致，但這些相關性無法證明其中存在直接的因果關係，且缺乏其他總體經濟模型進行驗證。\n3. 缺少關鍵數據：本報告缺乏台灣本土的經濟數據（如台灣 CPI、失業率、GDP、利率等），因此對台灣的影響僅能透過外部資料進行傳導性推論，無法形成全面的本土經濟評估。\n\n🔎 【未來一季追蹤清單】\n1. 美國核心 CPI 年增率的趨勢（是上升、持平或下降）。\n2. 美國失業率的變化方向（是上升或持平）。\n3. 美國工業生產年增率的加速或趨緩。\n4. 美元／台幣的 3 個月方向。\n\n🏫 【曉臻財經小教室】\n今日單字：【殖利率曲線】\n殖利率曲線是將不同到期日的債券殖利率繪製成圖形，通常橫軸為到期日，縱軸為殖利率。最常見的錯誤解讀是，單看曲線的形狀變化，而忽略了殖利率水位的絕對高低，以及其背後所代表的貨幣政策與市場預期。\n\n長期投資，不預測未來。",
+  "narration": {
+    "status": "ready",
+    "voice": "zh-TW-HsiaoChenNeural",
+    "release_tag": "xiaozhen-narration",
+    "asset_name": "xiaozhen-weekly-macro-2026-11-01.mp3",
+    "local_path": "data/audio/xiaozhen-weekly-macro-2026-11-01.mp3",
+    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-weekly-macro-2026-11-01.mp3?v=20261101080157"
+  },
+  "macro_snapshot": {
+    "economic_indicators": [
+      {
+        "id": "CPIAUCSL",
+        "label": "美國 CPI 年增率",
+        "unit": "%",
+        "source": "FRED",
+        "source_url": "https://fred.stlouisfed.org/series/CPIAUCSL",
+        "status": "available",
+        "as_of": "2026-09-01",
+        "latest": 336.3,
+        "display_value": 3.72,
+        "display_label": "年增率",
+        "change_3m": 0.26,
+        "change_3m_unit": "個百分點"
+      },
+      {
+        "id": "CPILFESL",
+        "label": "美國核心 CPI 年增率",
+        "unit": "%",
+        "source": "FRED",
+        "source_url": "https://fred.stlouisfed.org/series/CPILFESL",
+        "status": "available",
+        "as_of": "2026-09-01",
+        "latest": 338.9,
+        "display_value": 2.57,
+        "display_label": "年增率",
+        "change_3m": 0.0,
+        "change_3m_unit": "個百分點"
+      },
+      {
+        "id": "UNRATE",
+        "label": "美國失業率",
+        "unit": "%",
+        "source": "FRED",
+        "source_url": "https://fred.stlouisfed.org/series/UNRATE",
+        "status": "available",
+        "as_of": "2026-09-01",
+        "latest": 4.2,
+        "display_value": 4.2,
+        "display_label": "最新值",
+        "change_3m": 0.0,
+        "change_3m_unit": "個百分點"
+      },
+      {
+        "id": "INDPRO",
+        "label": "美國工業生產年增率",
+        "unit": "%",
+        "source": "FRED",
+        "source_url": "https://fred.stlouisfed.org/series/INDPRO",
+        "status": "available",
+        "as_of": "2026-09-01",
+        "latest": 103.95,
+        "display_value": 2.25,
+        "display_label": "年增率",
+        "change_3m": 0.79,
+        "change_3m_unit": "個百分點"
+      },
+      {
+        "id": "FEDFUNDS",
+        "label": "聯邦基金利率",
+        "unit": "%",
+        "source": "FRED",
+        "source_url": "https://fred.stlouisfed.org/series/FEDFUNDS",
+        "status": "available",
+        "as_of": "2026-09-01",
+        "latest": 3.75,
+        "display_value": 3.75,
+        "display_label": "最新值",
+        "change_3m": 0.12,
+        "change_3m_unit": "個百分點"
+      },
+      {
+        "id": "T10Y2Y",
+        "label": "美債 10Y−2Y 利差",
+        "unit": "百分點",
+        "source": "FRED",
+        "source_url": "https://fred.stlouisfed.org/series/T10Y2Y",
+        "status": "available",
+        "as_of": "2026-10-30",
+        "latest": 0.38,
+        "display_value": 0.38,
+        "display_label": "最新值",
+        "change_3m": -0.13,
+        "change_3m_unit": "百分點"
+      }
+    ],
+    "market_trends": [
+      {
+        "symbol": "^TWII",
+        "label": "台灣加權指數",
+        "category": "市場",
+        "source": "Yahoo Finance",
+        "status": "available",
+        "as_of": "2026-10-30",
+        "latest": 45211.83,
+        "change_3m_pct": 13.22,
+        "change_6m_pct": 15.03,
+        "change_12m_pct": 59.79
+      },
+      {
+        "symbol": "^GSPC",
+        "label": "S&P 500",
+        "category": "市場",
+        "source": "Yahoo Finance",
+        "status": "available",
+        "as_of": "2026-10-30",
+        "latest": 7580.07,
+        "change_3m_pct": 1.92,
+        "change_6m_pct": 6.22,
+        "change_12m_pct": 10.01
+      },
+      {
+        "symbol": "TWD=X",
+        "label": "美元／台幣",
+        "category": "匯率",
+        "source": "Yahoo Finance",
+        "status": "available",
+        "as_of": "2026-10-30",
+        "latest": 32.57,
+        "change_3m_pct": 0.67,
+        "change_6m_pct": 3.34,
+        "change_12m_pct": 6.63
+      },
+      {
+        "symbol": "DX-Y.NYB",
+        "label": "美元指數 DXY",
+        "category": "金融條件",
+        "source": "Yahoo Finance",
+        "status": "available",
+        "as_of": "2026-10-30",
+        "latest": 101.88,
+        "change_3m_pct": 1.87,
+        "change_6m_pct": 2.99,
+        "change_12m_pct": 2.68
+      },
+      {
+        "symbol": "^TNX",
+        "label": "美國 10 年期公債殖利率",
+        "category": "利率",
+        "source": "Yahoo Finance",
+        "status": "available",
+        "as_of": "2026-10-30",
+        "latest": 4.93,
+        "change_3m_bps": 27,
+        "change_6m_bps": 51,
+        "change_12m_bps": 87
+      }
+    ]
+  },
+  "news": [],
+  "risk_indicators": {
+    "vix": "-",
+    "vix_trend": "",
+    "usd_twd": "-",
+    "usd_trend": ""
+  }
+}

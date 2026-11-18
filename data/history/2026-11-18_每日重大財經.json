@@ -1,0 +1,27 @@
+{
+  "updated_at_utc": "2026-11-18 10:51:39 (TW)",
+  "title": "每日重大財經新聞 2026-11-18",
+  "report_type": "daily_major_news",
+  "model": "gemini-2.5-flash",
+  "model_requested": "gemini-2.5-flash",
+  "gemini_requests_this_run": 0,
+  "generation_status": "news_snapshot_fallback",
+  "generation_error": "未取得重大新聞候選",
+  "report": "📰 【今日重大財經新聞】\n今日未取得可驗證的重大財經新聞候選。\n\n⚖️ 【資料不能告訴我們什麼】\nRSS 候選資料不可用（未取得重大新聞候選），因此不以模型補寫新聞。\n\n🏫 【曉臻財經小教室】\n今日單字：【軟著陸】\n總經名詞需要放回資料時間序列中理解，單一標題不能取代資料。",
+  "narration": {
+    "status": "ready",
+    "voice": "zh-TW-HsiaoChenNeural",
+    "release_tag": "xiaozhen-narration",
+    "asset_name": "xiaozhen-daily-major-news-2026-11-18.mp3",
+    "local_path": "data/audio/xiaozhen-daily-major-news-2026-11-18.mp3",
+    "public_url": "https://github.com/flyer19820218/try_agents/releases/download/xiaozhen-narration/xiaozhen-daily-major-news-2026-11-18.mp3?v=20261118105139"
+  },
+  "macro_snapshot": {},
+  "news": [],
+  "risk_indicators": {
+    "vix": "-",
+    "vix_trend": "",
+    "usd_twd": "-",
+    "usd_trend": ""
+  }
+}
